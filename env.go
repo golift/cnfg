@@ -33,13 +33,13 @@ func parseStruct(field reflect.Value, t reflect.Type, prefix string) (bool, erro
 	}
 
 	for i := 0; i < t.NumField(); i++ { // Loop each struct member
-		tag := strings.Split(strings.ToUpper(t.Field(i).Tag.Get(ENVTag)), ",")[0]
-		ntag := prefix + "_" + tag
-		envval, ok := os.LookupEnv(ntag)
+		shorttag := strings.Split(strings.ToUpper(t.Field(i).Tag.Get(ENVTag)), ",")[0]
+		fulltag := prefix + "_" + shorttag
+		envval, ok := os.LookupEnv(fulltag)
 		subfield := field.Elem().Field(i)
 		// log.Println(t, subfield.Type(), " ===> ", ntag, " ===> ", envval, field.Kind(), field)
 
-		if exists, err := checkInterface(subfield, envval, ntag); err != nil {
+		if exists, err := checkInterface(subfield, envval, fulltag); err != nil {
 			return false, err
 		} else if exists {
 			continue
@@ -49,35 +49,35 @@ func parseStruct(field reflect.Value, t reflect.Type, prefix string) (bool, erro
 		case reflect.Ptr:
 			subfield = subfield.Elem()
 			if subfield.Kind() == reflect.Struct {
-				exists, err = parseStruct(subfield.Addr(), subfield.Type(), ntag)
+				exists, err = parseStruct(subfield.Addr(), subfield.Type(), fulltag)
 			}
 
 			// don't do this. a pointer to a slice? uhg.
 			if subfield.Kind() == reflect.Slice {
-				exists, err = parseSlice(subfield, ntag)
+				exists, err = parseSlice(subfield, fulltag)
 			}
 
 			if err != nil {
 				return false, err
 			}
 		case reflect.Struct:
-			exists, err = parseStruct(subfield.Addr(), subfield.Type(), ntag)
+			exists, err = parseStruct(subfield.Addr(), subfield.Type(), fulltag)
 			if err != nil {
 				return false, err
 			}
 		case reflect.Slice:
-			exists, err = parseSlice(subfield, ntag)
+			exists, err = parseSlice(subfield, fulltag)
 			if err != nil {
 				return false, err
 			}
 		default:
-			if !ok || tag == "" {
+			if !ok || shorttag == "" || shorttag == "-" {
 				break // switch
 			}
 
 			exists = true
 
-			if err = parseMember(subfield, ntag, envval); err != nil {
+			if err = parseMember(subfield, fulltag, envval); err != nil {
 				return false, err
 			}
 		}
