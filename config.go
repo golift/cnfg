@@ -7,12 +7,12 @@
 //
 // If this package interests you, pull requests and feature requests are welcomed!
 //
-// I consider this package the pinacle example of how to configure a (small) Go application from a file.
-// You can put your configuration into any file format: XML, YAML, JSON, TOML, and you can override any
-// struct member using an environment variable. As it is now, the (env) code lacks map{} and *pointer
-// support, but pretty much any other base type and nested member is supported. Adding more/the rest will
-// happen in time. I created this package because I got tired of writing custom env parser code for every
-// app I make. This simplifies all the heavy lifting and I don't even have to think about it now.
+// I consider this package the pinacle example of how to configure small Go applications from a file.
+// You can put your configuration into any file format: XML, YAML, JSON, TOML, and you can override
+// any struct member using an environment variable. As it is now, the (env) code lacks map{} support
+// but pretty much any other base type and nested member is supported. Adding more/the rest will
+// happen in time. I created this package because I got tired of writing custom env parser code for
+// every app I make. This simplifies all the heavy lifting and I don't even have to think about it now.
 package config
 
 import (
@@ -21,7 +21,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"reflect"
 	"strconv"
@@ -34,6 +33,11 @@ import (
 
 // ENVTag is the tag to look for on struct members. "json" is default.
 var ENVTag = "json"
+
+// IgnoreUnknown controls the error returned by ParseENV when you try to parse
+// unsupported types, like maps. As more types are added this becomes less of an issue.
+// Setting this to true supresses the error.
+var IgnoreUnknown bool
 
 // ENVUnmarshaler allows custom unmarshaling on a custom type.
 // If your type implements this, it will be called.
@@ -77,23 +81,46 @@ func ParseENV(c interface{}, prefix string) (bool, error) {
 	return parseStruct(reflect.ValueOf(c), reflect.TypeOf(c).Elem(), prefix)
 }
 
-func parseStruct(v reflect.Value, t reflect.Type, prefix string) (bool, error) {
+func parseStruct(field reflect.Value, t reflect.Type, prefix string) (bool, error) {
 	var exitOk, exists bool
 
 	var err error
+
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+
+		// Make a memory location for the nil pointer, and un-nil it.
+		if field = field.Elem(); field.IsNil() {
+			field.Set(reflect.New(field.Type().Elem()))
+		}
+	}
 
 	for i := 0; i < t.NumField(); i++ { // Loop each struct member
 		tag := strings.Split(strings.ToUpper(t.Field(i).Tag.Get(ENVTag)), ",")[0]
 		ntag := prefix + "_" + tag
 
-		switch field := v.Elem().Field(i); {
-		case field.Kind() == reflect.Struct:
-			exists, err = parseStruct(field.Addr(), field.Type(), ntag)
+		switch subfield := field.Elem().Field(i); subfield.Kind() {
+		case reflect.Ptr:
+			subfield = subfield.Elem()
+			if subfield.Kind() == reflect.Struct {
+				exists, err = parseStruct(subfield.Addr(), subfield.Type(), ntag)
+			}
+
+			// don't do this. a pointer to a slice? uhg.
+			if subfield.Kind() == reflect.Slice {
+				exists, err = parseSlice(subfield, ntag)
+			}
+
 			if err != nil {
 				return false, err
 			}
-		case field.Kind() == reflect.Slice:
-			exists, err = parseSlice(field, ntag)
+		case reflect.Struct:
+			exists, err = parseStruct(subfield.Addr(), subfield.Type(), ntag)
+			if err != nil {
+				return false, err
+			}
+		case reflect.Slice:
+			exists, err = parseSlice(subfield, ntag)
 			if err != nil {
 				return false, err
 			}
@@ -105,7 +132,7 @@ func parseStruct(v reflect.Value, t reflect.Type, prefix string) (bool, error) {
 
 			exists = true
 
-			if err = parseMember(field, ntag, envval); err != nil {
+			if err = parseMember(subfield, ntag, envval); err != nil {
 				return false, err
 			}
 		}
@@ -119,22 +146,34 @@ func parseStruct(v reflect.Value, t reflect.Type, prefix string) (bool, error) {
 }
 
 func parseMember(field reflect.Value, tag, envval string) error {
-	log.Println(field.Type().String())
-	// Reflect and update the u.Config struct member at position i.
-	switch field.Type().String() {
+	switch fieldType := field.Type().String(); fieldType {
 	// Handle each member type appropriately (differently).
 	case "string":
-		// This is a reflect package method to update a struct member by index.
+		// SetString is a reflect package method to update a struct member by index.
 		field.SetString(envval)
-	case "int":
-		val, err := strconv.Atoi(envval)
+	case "uint", "uint8", "uint16", "uint32", "uint64":
+		val, err := parseUint(fieldType, envval)
 		if err != nil {
 			return fmt.Errorf("%s: %v", tag, err)
 		}
 
-		field.Set(reflect.ValueOf(val))
+		field.SetUint(val)
+	case "int", "int8", "int16", "int32", "int64":
+		val, err := parseInt(fieldType, envval)
+		if err != nil {
+			return fmt.Errorf("%s: %v", tag, err)
+		}
+
+		field.SetInt(val)
 	case "float64":
 		val, err := strconv.ParseFloat(envval, 64)
+		if err != nil {
+			return fmt.Errorf("%s: %v", tag, err)
+		}
+
+		field.SetFloat(val)
+	case "float32":
+		val, err := strconv.ParseFloat(envval, 32)
 		if err != nil {
 			return fmt.Errorf("%s: %v", tag, err)
 		}
@@ -176,29 +215,62 @@ func parseMember(field reflect.Value, tag, envval string) error {
 	return nil
 }
 
+func parseUint(intType, envval string) (uint64, error) {
+	switch intType {
+	default:
+		return strconv.ParseUint(envval, 10, 0)
+	case "int8":
+		return strconv.ParseUint(envval, 10, 8)
+	case "int16":
+		return strconv.ParseUint(envval, 10, 16)
+	case "int32":
+		return strconv.ParseUint(envval, 10, 32)
+	case "int64":
+		return strconv.ParseUint(envval, 10, 64)
+	}
+}
+
+func parseInt(intType, envval string) (int64, error) {
+	switch intType {
+	default:
+		return strconv.ParseInt(envval, 10, 0)
+	case "int8":
+		return strconv.ParseInt(envval, 10, 8)
+	case "int16":
+		return strconv.ParseInt(envval, 10, 16)
+	case "int32":
+		return strconv.ParseInt(envval, 10, 32)
+	case "int64":
+		return strconv.ParseInt(envval, 10, 64)
+	}
+}
+
 func parseSlice(field reflect.Value, tag string) (bool, error) {
 	if field.IsNil() {
 		field.Set(reflect.MakeSlice(field.Type(), 0, 0))
 	}
 
-	/*	XXX: deal with a slice of pointers? hm.
-		if field.Type().Elem().Kind() == reflect.Ptr {
-				field = field.Elem().......stuff.
-			}
-	*/
-
-	switch k := field.Type().Elem().Kind(); k {
+	switch k := field.Type().Elem(); k.Kind() {
+	case reflect.Map:
+		fallthrough
 	default:
+		if IgnoreUnknown {
+			return false, nil
+		}
+
 		return false, fmt.Errorf("unsupported slice type: %v", k)
 	case reflect.Ptr:
-		return false, fmt.Errorf("slices of pointers don't work yet")
-	case reflect.Map:
-		return false, fmt.Errorf("maps don't work yet")
+		if k.Elem().Kind() == reflect.Struct {
+			return parseStructSlice(field, tag)
+		}
+
+		return parseMemberSlice(field, tag)
 	case reflect.Struct:
 		return parseStructSlice(field, tag)
 	case reflect.String, reflect.Float32, reflect.Float64, reflect.Bool,
 		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint32, reflect.Uint16, reflect.Uint64:
+
 		return parseMemberSlice(field, tag)
 	}
 }
@@ -214,11 +286,9 @@ FORLOOP:
 		switch exists, err := parseStruct(value, field.Type().Elem(), ntag); {
 		case err != nil:
 			return false, err
-
 		case !exists && i > field.Len():
 			// We've checked all possible ENV var's up to slice count + 1, stop there if it's empty.
 			break FORLOOP
-
 		case exists:
 			ok = true
 
