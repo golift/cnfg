@@ -241,7 +241,9 @@ func parseSlice(field reflect.Value, tag string) (bool, error) {
 
 func parseStructSlice(field reflect.Value, tag string) (bool, error) {
 	var ok bool
+
 	total := field.Len()
+
 FORLOOP:
 	for i := 0; i <= total; i++ {
 		ntag := tag + "_" + strconv.Itoa(i)
@@ -256,9 +258,9 @@ FORLOOP:
 			ok = true
 
 			if i >= field.Len() {
+				total++ // do one more iteration.
 				// The position in the ENV var is > slice size, so append.
 				field.Set(reflect.Append(field, reflect.Indirect(value)))
-				total++ // do one more iteration.
 				continue FORLOOP
 			}
 
@@ -298,9 +300,9 @@ func parseMemberSlice(field reflect.Value, tag string) (bool, error) {
 		}
 
 		if i >= field.Len() {
+			total++ // do one more loop iteration
 			// The position in the ENV var is > slice size, so append.
 			field.Set(reflect.Append(field, value))
-			total++  // do one more loop iteration
 			continue // check for the next slice member env var.
 		}
 
