@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+/* 90+% code coverage. */
+
 type testObscure struct {
 	FloatSlice []float32        `json:"is"`
 	UintSliceP []*uint16        `json:"uis"`
