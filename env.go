@@ -23,22 +23,14 @@ func parseStruct(field reflect.Value, prefix string) (bool, error) {
 
 	var err error
 
-	t := field.Type().Elem()
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-
-		// Make a memory location for the nil pointer, and un-nil it.
-		if field = field.Elem(); field.IsNil() && field.CanSet() {
-			field.Set(reflect.New(field.Type().Elem()))
-		}
-	}
-
+	newfield, t := getFieldType(field)
 	for i := 0; i < t.NumField(); i++ { // Loop each struct member
-		exists := false
+		var exists bool
+
 		shorttag := strings.Split(strings.ToUpper(t.Field(i).Tag.Get(ENVTag)), ",")[0]
 		fulltag := prefix + "_" + shorttag
-		envval, ok := os.LookupEnv(fulltag)
-		subfield := field.Elem().Field(i)
+		envval, envvalExists := os.LookupEnv(fulltag)
+		subfield := newfield.Elem().Field(i)
 		//		log.Println(t, subfield.Type(), " ===> ", fulltag, " ===> ", envval, field.Kind(), field)
 
 		if exists, err = checkInterface(subfield, envval, fulltag); err != nil {
@@ -59,7 +51,7 @@ func parseStruct(field reflect.Value, prefix string) (bool, error) {
 				err = fmt.Errorf("maps don't work")
 			}
 		default:
-			if !ok || shorttag == "" || shorttag == "-" {
+			if !envvalExists || shorttag == "" || shorttag == "-" {
 				break // switch
 			}
 
@@ -76,6 +68,20 @@ func parseStruct(field reflect.Value, prefix string) (bool, error) {
 	}
 
 	return exitOk, nil
+}
+
+func getFieldType(field reflect.Value) (reflect.Value, reflect.Type) {
+	t := field.Type().Elem()
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+
+		// Make a memory location for the nil pointer, and un-nil it.
+		if field = field.Elem(); field.IsNil() && field.CanSet() {
+			field.Set(reflect.New(field.Type().Elem()))
+		}
+	}
+
+	return field, t
 }
 
 func parsePointer(field reflect.Value, tag, envval string) (ok bool, err error) {
@@ -150,31 +156,38 @@ func parseMember(field reflect.Value, tag, envval string) (bool, error) {
 		// SetString is a reflect package method to update a struct member by index.
 		field.SetString(envval)
 	case typeUINT, typeUINT8, typeUINT16, typeUINT32, typeUINT64:
-		val := uint64(0)
+		var val uint64
+
 		val, err = parseUint(fieldType, envval)
 		field.SetUint(val)
 	case typeINT, typeINT8, typeINT16, typeINT32, typeINT64:
-		val := int64(0)
+		var val int64
+
 		val, err = parseInt(fieldType, envval)
 		field.SetInt(val)
 	case typeFloat64:
-		val := float64(0)
+		var val float64
+
 		val, err = strconv.ParseFloat(envval, 64)
 		field.SetFloat(val)
 	case typeFloat32:
-		val := float64(0)
+		var val float64
+
 		val, err = strconv.ParseFloat(envval, 32)
 		field.SetFloat(val)
 	case typeDur:
-		val := time.Duration(0)
+		var val time.Duration
+
 		val, err = time.ParseDuration(envval)
 		field.Set(reflect.ValueOf(val))
 	case typeBool:
-		val := false
+		var val bool
+
 		val, err = strconv.ParseBool(envval)
 		field.SetBool(val)
 	default:
-		ok := false
+		var ok bool
+
 		if ok, err = checkInterface(field, envval, tag); err == nil && !ok {
 			err = fmt.Errorf("unsupported type: %v (val: %s) - please report this", field.Type(), envval)
 		}
