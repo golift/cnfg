@@ -1,10 +1,12 @@
-# config
+# golift.io/config
+
+[![Go Report Card](https://goreportcard.com/badge/golift.io/config)](https://goreportcard.com/report/golift.io/config)
+
 
 Procedures for parsing configs files and environment variables into data structures.
 
-More docs/examples to come!
-
-Quick explanation on how the env variable mapping works:
+Quick explanation on how the env variable mapping works below.
+See [GODOC](https://godoc.org/golift.io/config) for a working code example.
 
 ```
 type Shelter struct {

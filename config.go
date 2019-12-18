@@ -50,4 +50,5 @@ func (d *Duration) UnmarshalText(b []byte) (err error) {
 	return
 }
 
+// Make sure our struct satisfies the interface it's for.
 var _ encoding.TextUnmarshaler = (*Duration)(nil)
