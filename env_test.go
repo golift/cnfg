@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-/* 90+% code coverage. */
+/* ~90% code coverage. */
 
 type testObscure struct {
 	FloatSlice []float32        `json:"is"`
@@ -142,32 +142,51 @@ func TestParseENVerrors(t *testing.T) {
 
 	type tester struct {
 		unexpd map[string]string
-		Broken map[string]string `json:"broken"`
+		Works  map[string]string `json:"works"`
+		Rad    map[string][]int  `json:"yup"`
 	}
+
+	os.Setenv("YO_WORKS_foostring", "fooval")
+	os.Setenv("YO_WORKS_foo2string", "foo2val")
+	os.Setenv("YO_YUP_server99_0", "128")
+	os.Setenv("YO_YUP_server99_1", "129")
+	os.Setenv("YO_YUP_server99_2", "130")
+	os.Setenv("YO_YUP_server100_0", "256")
 
 	c := tester{}
 	ok, err := ParseENV(&c, "YO")
 
-	a.NotNil(err, "maps are unsupported and must produce an error")
-	a.False(ok)
+	a.Nil(err, "maps are supported and must not produce an error")
+	a.True(ok)
+	a.Nil(c.unexpd)
+	a.Equal("fooval", c.Works["foostring"])
+	a.Equal("foo2val", c.Works["foo2string"])
+	a.Equal([]int{128, 129, 130}, c.Rad["server99"])
+	a.Equal([]int{256}, c.Rad["server100"])
 
 	type tester2 struct {
-		Broken []map[string]string `json:"broken"`
+		NotBroken  []map[string]string  `json:"broken"`
+		NotBroken2 []*map[string]string `json:"broken2"`
+		HasStuff   []map[string]string  `json:"stuff"`
 	}
 
-	os.Setenv("YO_BROKEN", "value")
+	os.Setenv("MORE_BROKEN", "value")
+	os.Setenv("MORE_BROKEN_0_freesauce", "at-charlies")
+	os.Setenv("MORE_BROKEN2_0_freesoup", "at-daves")
+	os.Setenv("MORE_STUFF_0_freesoda", "not-at-pops")
+	os.Setenv("MORE_STUFF_0_freetime", "at-pops")
+	os.Setenv("MORE_STUFF_0_a", "")
 
-	c2 := tester2{}
-	ok, err = ParseENV(&c2, "YO")
+	c2 := tester2{HasStuff: []map[string]string{{"freesoda": "at-pops"}, {"a": "v"}}}
+	ok, err = ParseENV(&c2, "MORE")
 
-	a.Nil(c.Broken)
-	a.Nil(c.unexpd)
-	a.NotNil(err, "maps are unsupported and must produce an error")
-	a.False(ok)
+	a.Nil(err, "map slices are supported and must not produce an error")
+	a.True(ok)
 
-	IgnoreUnknown = true
-	ok, err = ParseENV(&c2, "YO")
-
-	a.Nil(err, "with IgnoreUnknown set to true, type-errors should be ignored")
-	a.False(ok, "nothing mapped, so ok should be false")
+	f := *c2.NotBroken2[0]
+	a.EqualValues("at-charlies", c2.NotBroken[0]["freesauce"])
+	a.EqualValues("at-daves", f["freesoup"])
+	a.EqualValues("not-at-pops", c2.HasStuff[0]["freesoda"])
+	a.EqualValues("at-pops", c2.HasStuff[0]["freetime"])
+	a.EqualValues("", c2.HasStuff[0]["a"], "the empty map value must be set when the env var is empty")
 }

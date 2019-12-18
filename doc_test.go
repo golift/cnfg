@@ -7,7 +7,7 @@ import (
 )
 
 // Complete working example for ParseENV()
-func ExampleParseENV() {
+func ExampleParseENV_simple() {
 	// Systems is used to show an example of how to access nested slices.
 	type System struct {
 		Name   string `xml:"name"`
@@ -49,10 +49,9 @@ func ExampleParseENV() {
 	// We change the default of "json" to "xml".
 	// XML tag names are singular and look better as env variables.
 	ENVTag = "xml"
-	// And in your app you do this to parse the values into your config pointer:
-	ok, err := ParseENV(c, "APP")
 
-	// Now you should check the error.
+	// Run ParseENV to parse the values into your config pointer:
+	ok, err := ParseENV(c, "APP")
 	if err != nil {
 		panic(err)
 	}
