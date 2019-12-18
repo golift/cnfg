@@ -28,7 +28,7 @@ func parseStruct(field reflect.Value, prefix string) (bool, error) {
 		t = t.Elem()
 
 		// Make a memory location for the nil pointer, and un-nil it.
-		if field = field.Elem(); field.IsNil() {
+		if field = field.Elem(); field.IsNil() && field.CanSet() {
 			field.Set(reflect.New(field.Type().Elem()))
 		}
 	}
@@ -54,6 +54,10 @@ func parseStruct(field reflect.Value, prefix string) (bool, error) {
 			exists, err = parseStruct(subfield.Addr(), fulltag)
 		case reflect.Slice:
 			exists, err = parseSlice(subfield, fulltag)
+		case reflect.Map:
+			if !IgnoreUnknown {
+				err = fmt.Errorf("maps don't work")
+			}
 		default:
 			if !ok || shorttag == "" || shorttag == "-" {
 				break // switch
@@ -62,12 +66,12 @@ func parseStruct(field reflect.Value, prefix string) (bool, error) {
 			exists, err = parseMember(subfield, fulltag, envval)
 		}
 
-		if exists {
-			exitOk = true
+		if err != nil {
+			return false, err
 		}
 
-		if err != nil {
-			return exitOk, err
+		if exists {
+			exitOk = true
 		}
 	}
 
@@ -95,7 +99,7 @@ func parsePointer(field reflect.Value, tag, envval string) (ok bool, err error) 
 		value = value.Addr()
 	}
 
-	if ok {
+	if ok && field.CanSet() {
 		field.Set(value)
 	}
 
@@ -134,6 +138,10 @@ func checkInterface(field reflect.Value, envval, tag string) (bool, error) {
 // parseMember parses non-struct, non-slice struct-member types.
 func parseMember(field reflect.Value, tag, envval string) (bool, error) {
 	var err error
+
+	if !field.CanSet() {
+		return false, nil
+	}
 
 	// log.Println("found", tag, envval)
 	switch fieldType := field.Type().String(); fieldType {
@@ -210,6 +218,10 @@ func parseInt(intType, envval string) (int64, error) {
 }
 
 func parseSlice(field reflect.Value, tag string) (bool, error) {
+	if !field.CanSet() {
+		return false, nil
+	}
+
 	if field.IsNil() {
 		field.Set(reflect.MakeSlice(field.Type(), 0, 0))
 	}
@@ -241,8 +253,11 @@ func parseSlice(field reflect.Value, tag string) (bool, error) {
 func parseStructSlice(field reflect.Value, tag string) (bool, error) {
 	var ok bool
 
-	total := field.Len()
+	if !field.CanSet() {
+		return false, nil
+	}
 
+	total := field.Len()
 FORLOOP:
 	for i := 0; i <= total; i++ {
 		ntag := tag + "_" + strconv.Itoa(i)
@@ -273,6 +288,10 @@ FORLOOP:
 
 func parseMemberSlice(field reflect.Value, tag string) (bool, error) {
 	var ok bool
+
+	if !field.CanSet() {
+		return false, nil
+	}
 
 	total := field.Len()
 	for i := 0; i <= total; i++ {

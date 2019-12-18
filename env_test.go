@@ -23,6 +23,7 @@ type testSpecial struct {
 }
 
 func TestParseENV(t *testing.T) {
+	// do not run this in parallel with other tests that change environment variables
 	t.Parallel()
 
 	a := assert.New(t)
@@ -111,6 +112,7 @@ func testSpecialENV(a *assert.Assertions) {
 	a.Nil(err)
 	a.Equal(time.Minute, c.Dur)
 	a.Equal(time.Second, c.CDur.Duration)
+	a.Nil(c.Durs)
 }
 
 func TestParseInt(t *testing.T) {
@@ -131,4 +133,39 @@ func TestParseInt(t *testing.T) {
 		a.Equal(int64(1), i)
 		a.Nil(err)
 	}
+}
+
+func TestParseENVerrors(t *testing.T) {
+	a := assert.New(t)
+
+	type tester struct {
+		unexpd map[string]string
+		Broken map[string]string `json:"broken"`
+	}
+
+	c := tester{}
+	ok, err := ParseENV(&c, "YO")
+
+	a.NotNil(err, "maps are unsupported and must produce an error")
+	a.False(ok)
+
+	type tester2 struct {
+		Broken []map[string]string `json:"broken"`
+	}
+
+	os.Setenv("YO_BROKEN", "value")
+
+	c2 := tester2{}
+	ok, err = ParseENV(&c2, "YO")
+
+	a.Nil(c.Broken)
+	a.Nil(c.unexpd)
+	a.NotNil(err, "maps are unsupported and must produce an error")
+	a.False(ok)
+
+	IgnoreUnknown = true
+	ok, err = ParseENV(&c2, "YO")
+
+	a.Nil(err, "with IgnoreUnknown set to true, type-errors should be ignored")
+	a.False(ok, "nothing mapped, so ok should be false")
 }
