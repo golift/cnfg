@@ -237,15 +237,14 @@ func parseSlice(field reflect.Value, tag string) (bool, error) {
 
 	switch k := field.Type().Elem(); k.Kind() {
 	case reflect.Ptr:
-		if k.Elem().Kind() == reflect.Struct {
+		switch k.Elem().Kind() {
+		case reflect.Struct:
 			return parseStructSlice(field, tag)
-		}
-
-		if k.Elem().Kind() == reflect.Map {
+		case reflect.Map:
 			return parseMapSlice(field, tag)
+		default:
+			return parseMemberSlice(field, tag)
 		}
-
-		return parseMemberSlice(field, tag)
 	case reflect.Struct:
 		return parseStructSlice(field, tag)
 	case reflect.String, reflect.Float32, reflect.Float64, reflect.Bool,
@@ -259,7 +258,7 @@ func parseSlice(field reflect.Value, tag string) (bool, error) {
 			return false, nil
 		}
 
-		return false, fmt.Errorf("unsupported slice type: %v %v", k, k.Elem().Kind())
+		return false, fmt.Errorf("unsupported slice type: %v %v", k, k.Kind())
 	}
 }
 
@@ -320,7 +319,7 @@ func parseMap(field reflect.Value, tag string) (bool, error) {
 	}
 
 	vals := getMapVals(tag)
-	if len(vals) < 0 {
+	if len(vals) < 1 {
 		return false, nil
 	}
 
@@ -338,7 +337,9 @@ func parseMap(field reflect.Value, tag string) (bool, error) {
 
 		if v == "" {
 			ok = true
+
 			field.SetMapIndex(keyval, reflect.Value{})
+
 			continue
 		}
 
@@ -361,6 +362,7 @@ func parseMap(field reflect.Value, tag string) (bool, error) {
 
 func getMapVals(tag string) map[string]string {
 	m := make(map[string]string)
+
 	for _, pair := range os.Environ() {
 		split := strings.SplitN(pair, "=", 2)
 		if len(split) != 2 {
@@ -429,12 +431,12 @@ func parseMemberSlice(field reflect.Value, tag string) (bool, error) {
 	for i := 0; i <= total; i++ {
 		ntag := tag + "_" + strconv.Itoa(i)
 		envval, exists := os.LookupEnv(ntag)
-		isPtr := field.Type().Elem().Kind() == reflect.Ptr
 
 		if !exists {
 			continue // only work with env var data that exists.
 		}
 
+		isPtr := field.Type().Elem().Kind() == reflect.Ptr
 		ok = true // the slice exists because it has at least 1 member.
 
 		// This makes an empty value we _set_ with parseMemebr()
