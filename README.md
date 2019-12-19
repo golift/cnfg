@@ -1,12 +1,12 @@
-# golift.io/config
+# golift.io/cnfg
 
-[![Go Report Card](https://goreportcard.com/badge/golift.io/config)](https://goreportcard.com/report/golift.io/config)
+[![Go Report Card](https://goreportcard.com/badge/golift.io/cnfg)](https://goreportcard.com/report/golift.io/cnfg)
 
 
 Procedures for parsing configs files and environment variables into data structures.
 
 Quick explanation on how the env variable mapping works below.
-See [GODOC](https://godoc.org/golift.io/config) for a working code example.
+See [GODOC](https://godoc.org/golift.io/cnfg) for a working code example.
 
 Supports almost every possible type. Please open an issue if you run into a bug
 or an unsupported type.

@@ -1,4 +1,4 @@
-// Package config provide basic procedures to parse a config file into a struct,
+// Package cnfg provide basic procedures to parse a config file into a struct,
 // and more powerfully, parse a slew of environment variables into the same or
 // a different struct. These two procedures can be used one after the other in
 // either order (the latter overrides parts of the former).
@@ -11,4 +11,4 @@
 // but pretty much any other base type and nested member is supported. Adding more/the rest will
 // happen in time. I created this package because I got tired of writing custom env parser code for
 // every app I make. This simplifies all the heavy lifting and I don't even have to think about it now.
-package config
+package cnfg
