@@ -8,6 +8,9 @@ Procedures for parsing configs files and environment variables into data structu
 Quick explanation on how the env variable mapping works below.
 See [GODOC](https://godoc.org/golift.io/config) for a working code example.
 
+Supports almost every possible type. Please open an issue if you run into a bug
+or an unsupported type.
+
 ```
 type Shelter struct {
 	Title  string    `json:"title"`

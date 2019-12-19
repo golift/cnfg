@@ -1,9 +1,7 @@
 // Package config provide basic procedures to parse a config file into a struct,
 // and more powerfully, parse a slew of environment variables into the same or
 // a different struct. These two procedures can be used one after the other in
-// either order (the latter overrides the former).
-// As of now, this software is still very new and lacks great examples. It is in
-// use in "production" but hasn't had a lot of different use cases applied to it.
+// either order (the latter overrides parts of the former).
 //
 // If this package interests you, pull requests and feature requests are welcomed!
 //

@@ -12,7 +12,7 @@ import (
 
 // ParseFile parses a configuration file (of any format) into a config struct.
 // This is a shorthand method for calling Unmarshal against the json, xml, yaml
-// or toml packages. If the file name contains an appropriate extension it is
+// or toml packages. If the file name contains an appropriate suffix it is
 // unmarshaled with the corresponding package. If the suffix is missing, TOML
 // is assumed.
 func ParseFile(c interface{}, configFile string) error {
