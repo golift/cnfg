@@ -5,16 +5,20 @@ import (
 	"time"
 )
 
-// ENVTag is the tag to look for on struct members. "json" is default.
+// ENVTag is the tag to look for on struct members. You may choose to use a custom
+// tag by changing this. "env" is popular, "json" is default and "xml" works well
+// because XML tags are usually singular. Singular variable names work well for
+// bash environment variables.
 var ENVTag = "json"
 
 // IgnoreUnknown controls the error returned by ParseENV when you try to parse
-// unsupported types, like maps. As more types are added this becomes less of an issue.
+// unsupported types. As more types are added this becomes less of an issue.
+// Most types are supported, but if you run into an unexpected error, set this to true.
 // Setting this to true suppresses the error.
 var IgnoreUnknown bool
 
 // ENVUnmarshaler allows custom unmarshaling on a custom type.
-// If your type implements this, it will be called.
+// If your type implements this, it will be called and the logic stops there.
 type ENVUnmarshaler interface {
 	UnmarshalENV(tag, envval string) error
 }
@@ -44,7 +48,9 @@ const (
 // the environment unmarshaler supports time.Duration natively.
 type Duration struct{ time.Duration }
 
-// UnmarshalText parses a duration type from a config file.
+// UnmarshalText parses a duration type from a config file. This method works
+// with the Duration type to allow unmarshaling of durations from files and
+// env variables in the same struct. You won't generally call this directly.
 func (d *Duration) UnmarshalText(b []byte) (err error) {
 	d.Duration, err = time.ParseDuration(string(b))
 	return

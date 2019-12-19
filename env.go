@@ -3,7 +3,6 @@ package config
 import (
 	"encoding"
 	"fmt"
-	"log"
 	"os"
 	"reflect"
 	"strconv"
@@ -95,7 +94,6 @@ func parsePointer(field reflect.Value, tag, envval string) (ok bool, err error) 
 
 func checkInterface(field reflect.Value, envval, tag string) (bool, error) {
 	if !field.CanAddr() || !field.Addr().CanInterface() {
-		log.Println("can't interface or addr", envval, tag, field.Kind(), field.Type())
 		return false, nil
 	}
 
