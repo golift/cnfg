@@ -3,6 +3,7 @@ package config
 import (
 	"encoding"
 	"fmt"
+	"log"
 	"os"
 	"reflect"
 	"strconv"
@@ -42,6 +43,7 @@ func parseStruct(field reflect.Value, prefix string) (bool, error) {
 }
 
 func parseAnything(field reflect.Value, tag, envval string, force bool) (bool, error) {
+	//	log.Println("anything", envval, tag, field.Kind(), field.Type())
 	if exists, err := checkInterface(field, envval, tag); err != nil {
 		return false, err
 	} else if exists {
@@ -81,53 +83,37 @@ func getFieldType(field reflect.Value) (reflect.Value, reflect.Type) {
 }
 
 func parsePointer(field reflect.Value, tag, envval string) (ok bool, err error) {
-	value := reflect.Value{}
+	value := reflect.New(field.Type().Elem()).Elem()
 
-	switch field.Type().Elem().Kind() {
-	case reflect.Struct:
-		value = reflect.New(field.Type().Elem())
-		ok, err = parseStruct(value, tag)
-	case reflect.Slice:
-		// don't do this. a pointer to a slice? uhg.
-		value = reflect.New(field.Type().Elem())
-		ok, err = parseSlice(value.Elem(), tag)
-	default:
-		if strings.HasSuffix(tag, "_") || envval == "" {
-			return false, nil
-		}
-
-		value = reflect.Indirect(reflect.New(field.Type().Elem()))
-		ok, err = parseMember(value, tag, envval)
-		value = value.Addr()
-	}
-
+	ok, err = parseAnything(value, tag, envval, false)
 	if ok && field.CanSet() {
-		field.Set(value)
+		field.Set(value.Addr())
 	}
 
 	return ok, err
 }
 
 func checkInterface(field reflect.Value, envval, tag string) (bool, error) {
-	if !field.CanInterface() || !field.CanAddr() {
+	if !field.CanAddr() || !field.Addr().CanInterface() {
+		log.Println("can't interface or addr", envval, tag, field.Kind(), field.Type())
 		return false, nil
 	}
 
-	if v, ok := field.Addr().Interface().(encoding.TextUnmarshaler); ok {
-		if envval == "" {
-			return false, nil
-		}
-
-		if err := v.UnmarshalText([]byte(envval)); err != nil {
+	if v, ok := field.Addr().Interface().(ENVUnmarshaler); ok {
+		// Custom unmarshaler can proceed even if envval is empty. It may produce new envvals...
+		if err := v.UnmarshalENV(tag, envval); err != nil {
 			return false, err
 		}
 
 		return true, nil
 	}
 
-	if v, ok := field.Addr().Interface().(ENVUnmarshaler); ok {
-		// Custom unmarshaler can proceed even if envval is empty. It may produce new envvals...
-		if err := v.UnmarshalENV(tag, envval); err != nil {
+	if envval == "" {
+		return false, nil
+	}
+
+	if v, ok := field.Addr().Interface().(encoding.TextUnmarshaler); ok {
+		if err := v.UnmarshalText([]byte(envval)); err != nil {
 			return false, err
 		}
 
@@ -145,7 +131,6 @@ func parseMember(field reflect.Value, tag, envval string) (bool, error) {
 		return false, nil
 	}
 
-	// log.Println("found", tag, envval)
 	switch fieldType := field.Type().String(); fieldType {
 	// Handle each member type appropriately (differently).
 	case typeSTR:
@@ -227,14 +212,22 @@ func parseInt(intType, envval string) (int64, error) {
 }
 
 func parseSlice(field reflect.Value, tag string) (bool, error) {
-	if !field.CanSet() {
+	value := field
+	if !value.CanSet() {
 		return false, nil
 	}
 
-	if field.IsNil() {
-		field.Set(reflect.MakeSlice(field.Type(), 0, 0))
+	reflect.Copy(value, field)
+
+	ok, err := parseSliceValue(value, tag)
+	if ok {
+		field.Set(value) // Overwrite the slice.
 	}
 
+	return ok, err
+}
+
+func parseSliceValue(field reflect.Value, tag string) (bool, error) {
 	switch k := field.Type().Elem(); k.Kind() {
 	case reflect.Ptr:
 		switch k.Elem().Kind() {
@@ -286,26 +279,30 @@ FORLOOP:
 			value = reflect.New(value.Type().Elem()).Elem()
 		}
 
-		switch exists, err := parseMap(value, ntag); {
-		case err != nil:
+		exists, err := parseMap(value, ntag)
+		if err != nil {
 			return false, err
-		case exists:
-			ok = true
-
-			if isPtr {
-				value = value.Addr()
-			}
-
-			if i >= field.Len() {
-				total++ // do one more iteration.
-				// The position in the ENV var is > slice size, so append.
-				field.Set(reflect.Append(field, value))
-				continue FORLOOP
-			}
-
-			// The position in the ENV var exists! Overwrite slice index directly.
-			field.Index(i).Set(reflect.Indirect(value))
 		}
+
+		if !exists {
+			continue FORLOOP
+		}
+
+		ok = true
+
+		if isPtr {
+			value = value.Addr()
+		}
+
+		if i >= field.Len() {
+			total++ // do one more iteration.
+			// The position in the ENV var is > slice size, so append.
+			field.Set(reflect.Append(field, value))
+			continue FORLOOP
+		}
+
+		// The position in the ENV var exists! Overwrite slice index directly.
+		field.Index(i).Set(reflect.Indirect(value))
 	}
 
 	return ok, nil

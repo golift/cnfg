@@ -167,6 +167,7 @@ func TestParseENVerrors(t *testing.T) {
 	type tester2 struct {
 		NotBroken  []map[string]string  `json:"broken"`
 		NotBroken2 []*map[string]string `json:"broken2"`
+		NotBroken3 []map[int]int        `json:"broken3"`
 		HasStuff   []map[string]string  `json:"stuff"`
 	}
 
@@ -189,4 +190,5 @@ func TestParseENVerrors(t *testing.T) {
 	a.EqualValues("not-at-pops", c2.HasStuff[0]["freesoda"])
 	a.EqualValues("at-pops", c2.HasStuff[0]["freetime"])
 	a.EqualValues("", c2.HasStuff[0]["a"], "the empty map value must be set when the env var is empty")
+	a.Nil(c2.NotBroken3, "a nil map without overrides must remain nil")
 }
