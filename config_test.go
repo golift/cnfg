@@ -45,7 +45,7 @@ func (t *TimeX) UnmarshalENV(tag, val string) error {
 
 // This simple example shows how you may use the ENVUnmarshaler interface.
 // This shows how to use two environment variables to set one custom value.
-func ExampleENVUnmarshaler_UnmarshalENV() {
+func ExampleENVUnmarshaler_using_two_env_variables() {
 	c := &Config{}
 
 	os.Setenv("APP_IN", "5m")
