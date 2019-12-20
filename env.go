@@ -14,24 +14,29 @@ import (
 // This is useful for Docker users that find it easier to pass ENV variables
 // than a specific configuration file. Uses reflection to find struct tags.
 func ParseENV(c interface{}, prefix string) (bool, error) {
-	return parseStruct(reflect.ValueOf(c), prefix)
+	value := reflect.ValueOf(c)
+	if value.Kind() != reflect.Ptr || value.Elem().Kind() != reflect.Struct {
+		return false, fmt.Errorf("must provide pointer to struct")
+	}
+
+	return parseStruct(value, prefix)
 }
 
 // parseStruct does most of the heavy lifting. Called every time a struct is encountered.
 func parseStruct(field reflect.Value, prefix string) (bool, error) {
 	var exitOk bool
 
-	newfield, t := getFieldType(field)
+	t := field.Type().Elem()
 	for i := 0; i < t.NumField(); i++ { // Loop each struct member
 		shorttag := strings.Split(strings.ToUpper(t.Field(i).Tag.Get(ENVTag)), ",")[0]
-		if shorttag == "-" {
-			continue
+		if !field.Elem().Field(i).CanSet() || shorttag == "-" || shorttag == "" {
+			continue // This _only_ works with reflection tags.
 		}
 
 		tag := prefix + "_" + shorttag
 		envval, ok := os.LookupEnv(tag)
 
-		if exists, err := parseAnything(newfield.Elem().Field(i), tag, envval, ok); err != nil {
+		if exists, err := parseAnything(field.Elem().Field(i), tag, envval, ok); err != nil {
 			return false, err
 		} else if exists {
 			exitOk = true
@@ -42,8 +47,8 @@ func parseStruct(field reflect.Value, prefix string) (bool, error) {
 }
 
 func parseAnything(field reflect.Value, tag, envval string, force bool) (bool, error) {
-	//	log.Println("anything", envval, tag, field.Kind(), field.Type())
-	if exists, err := checkInterface(field, envval, tag); err != nil {
+	// 	log.Println("parseAnything", envval, tag, field.Kind(), field.Type(), field.Interface())
+	if exists, err := checkInterface(field, tag, envval); err != nil {
 		return false, err
 	} else if exists {
 		return true, nil
@@ -67,32 +72,24 @@ func parseAnything(field reflect.Value, tag, envval string, force bool) (bool, e
 	}
 }
 
-func getFieldType(field reflect.Value) (reflect.Value, reflect.Type) {
-	t := field.Type().Elem()
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-
-		// Make a memory location for the nil pointer, and un-nil it.
-		if field = field.Elem(); field.IsNil() && field.CanSet() {
-			field.Set(reflect.New(field.Type().Elem()))
-		}
+func parsePointer(field reflect.Value, tag, envval string) (ok bool, err error) {
+	value := reflect.New(field.Type().Elem())
+	if field.Elem().CanAddr() {
+		// if the pointer already has a value, copy it instead of use the new one.
+		value = field.Elem().Addr()
 	}
 
-	return field, t
-}
-
-func parsePointer(field reflect.Value, tag, envval string) (ok bool, err error) {
-	value := reflect.New(field.Type().Elem()).Elem()
-
-	ok, err = parseAnything(value, tag, envval, false)
-	if ok && field.CanSet() {
-		field.Set(value.Addr())
+	// Pass the non-pointer element back into the start.
+	ok, err = parseAnything(value.Elem(), tag, envval, false)
+	if ok {
+		// overwrite the pointer only if something was parsed.
+		field.Set(value)
 	}
 
 	return ok, err
 }
 
-func checkInterface(field reflect.Value, envval, tag string) (bool, error) {
+func checkInterface(field reflect.Value, tag, envval string) (bool, error) {
 	if !field.CanAddr() || !field.Addr().CanInterface() {
 		return false, nil
 	}
@@ -124,10 +121,6 @@ func checkInterface(field reflect.Value, envval, tag string) (bool, error) {
 // parseMember parses non-struct, non-slice struct-member types.
 func parseMember(field reflect.Value, tag, envval string) (bool, error) {
 	var err error
-
-	if !field.CanSet() {
-		return false, nil
-	}
 
 	switch fieldType := field.Type().String(); fieldType {
 	// Handle each member type appropriately (differently).
@@ -167,8 +160,8 @@ func parseMember(field reflect.Value, tag, envval string) (bool, error) {
 	default:
 		var ok bool
 
-		if ok, err = checkInterface(field, envval, tag); err == nil && !ok {
-			err = fmt.Errorf("unsupported type: %v (val: %s) - please report this", field.Type(), envval)
+		if ok, err = checkInterface(field, tag, envval); err == nil && !ok {
+			err = fmt.Errorf("unsupported type: %v (val: %s) - please report this if you think this type should be supported", field.Type(), envval)
 		}
 	}
 
@@ -211,9 +204,6 @@ func parseInt(intType, envval string) (int64, error) {
 
 func parseSlice(field reflect.Value, tag string) (bool, error) {
 	value := field
-	if !value.CanSet() {
-		return false, nil
-	}
 
 	reflect.Copy(value, field)
 
@@ -226,81 +216,39 @@ func parseSlice(field reflect.Value, tag string) (bool, error) {
 }
 
 func parseSliceValue(field reflect.Value, tag string) (bool, error) {
-	switch k := field.Type().Elem(); k.Kind() {
-	case reflect.Ptr:
-		switch k.Elem().Kind() {
-		case reflect.Struct:
-			return parseStructSlice(field, tag)
-		case reflect.Map:
-			return parseMapSlice(field, tag)
-		default:
-			return parseMemberSlice(field, tag)
-		}
-	case reflect.Struct:
-		return parseStructSlice(field, tag)
-	case reflect.String, reflect.Float32, reflect.Float64, reflect.Bool,
-		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-		reflect.Uint, reflect.Uint8, reflect.Uint32, reflect.Uint16, reflect.Uint64:
-		return parseMemberSlice(field, tag)
-	case reflect.Map:
-		return parseMapSlice(field, tag)
-	default:
-		if IgnoreUnknown {
-			return false, nil
-		}
-
-		return false, fmt.Errorf("unsupported slice type: %v %v", k, k.Kind())
-	}
-}
-
-func parseMapSlice(field reflect.Value, tag string) (bool, error) {
 	var ok bool
 
-	if !field.CanSet() {
-		return false, nil
-	}
-
 	total := field.Len()
-	isPtr := field.Type().Elem().Kind() == reflect.Ptr
-
-FORLOOP:
 	for i := 0; i <= total; i++ {
 		ntag := tag + "_" + strconv.Itoa(i)
+		envval, exists := os.LookupEnv(ntag)
 
+		// Start with a blank value for this item
 		value := reflect.Indirect(reflect.New(field.Type().Elem()))
-
 		if i < field.Len() {
+			// Use the passed in value if it exists.
 			value = reflect.Indirect(field.Index(i).Addr())
 		}
 
-		if isPtr {
-			value = reflect.New(value.Type().Elem()).Elem()
-		}
-
-		exists, err := parseMap(value, ntag)
-		if err != nil {
+		if exists, err := parseAnything(value, ntag, envval, exists); err != nil {
 			return false, err
-		}
-
-		if !exists {
-			continue FORLOOP
+		} else if !exists {
+			continue
 		}
 
 		ok = true
 
-		if isPtr {
-			value = value.Addr()
-		}
-
 		if i >= field.Len() {
 			total++ // do one more iteration.
+
 			// The position in the ENV var is > slice size, so append.
 			field.Set(reflect.Append(field, value))
-			continue FORLOOP
+
+			continue
 		}
 
 		// The position in the ENV var exists! Overwrite slice index directly.
-		field.Index(i).Set(reflect.Indirect(value))
+		field.Index(i).Set(value)
 	}
 
 	return ok, nil
@@ -308,10 +256,6 @@ FORLOOP:
 
 func parseMap(field reflect.Value, tag string) (bool, error) {
 	var ok bool
-
-	if !field.CanSet() {
-		return false, nil
-	}
 
 	vals := getMapVals(tag)
 	if len(vals) < 1 {
@@ -325,12 +269,12 @@ func parseMap(field reflect.Value, tag string) (bool, error) {
 	for k, v := range vals {
 		keyval := reflect.Indirect(reflect.New(field.Type().Key()))
 
-		_, err := parseAnything(keyval, tag, k, true)
-		if err != nil {
+		if _, err := parseAnything(keyval, tag, k, true); err != nil {
 			return false, err
 		}
 
 		if v == "" {
+			// a blank env value was provided, set the field to nil.
 			ok = true
 
 			field.SetMapIndex(keyval, reflect.Value{})
@@ -375,90 +319,4 @@ func getMapVals(tag string) map[string]string {
 	}
 
 	return m
-}
-
-func parseStructSlice(field reflect.Value, tag string) (bool, error) {
-	var ok bool
-
-	if !field.CanSet() {
-		return false, nil
-	}
-
-	total := field.Len()
-FORLOOP:
-	for i := 0; i <= total; i++ {
-		ntag := tag + "_" + strconv.Itoa(i)
-		value := reflect.New(field.Type().Elem())
-
-		if i < field.Len() {
-			value = field.Index(i).Addr()
-		}
-
-		switch exists, err := parseStruct(value, ntag); {
-		case err != nil:
-			return false, err
-		case exists:
-			ok = true
-
-			if i >= field.Len() {
-				total++ // do one more iteration.
-				// The position in the ENV var is > slice size, so append.
-				field.Set(reflect.Append(field, reflect.Indirect(value)))
-				continue FORLOOP
-			}
-
-			// The position in the ENV var exists! Overwrite slice index directly.
-			field.Index(i).Set(reflect.Indirect(value))
-		}
-	}
-
-	return ok, nil
-}
-
-func parseMemberSlice(field reflect.Value, tag string) (bool, error) {
-	var ok bool
-
-	if !field.CanSet() {
-		return false, nil
-	}
-
-	total := field.Len()
-	for i := 0; i <= total; i++ {
-		ntag := tag + "_" + strconv.Itoa(i)
-		envval, exists := os.LookupEnv(ntag)
-
-		if !exists {
-			continue // only work with env var data that exists.
-		}
-
-		isPtr := field.Type().Elem().Kind() == reflect.Ptr
-		ok = true // the slice exists because it has at least 1 member.
-
-		// This makes an empty value we _set_ with parseMemebr()
-		value := reflect.Indirect(reflect.New(field.Type().Elem()))
-		if isPtr {
-			value = reflect.New(value.Type().Elem()).Elem()
-		}
-
-		if _, err := parseMember(value, ntag, envval); err != nil {
-			return false, err
-		}
-
-		if isPtr {
-			value = value.Addr()
-		}
-
-		if i >= field.Len() {
-			total++ // do one more loop iteration
-			// The position in the ENV var is > slice size, so append.
-			field.Set(reflect.Append(field, value))
-
-			continue // check for the next slice member env var.
-		}
-
-		// The position in the ENV var exists! Overwrite slice index directly.
-		field.Index(i).Set(value)
-	}
-
-	return ok, nil
 }

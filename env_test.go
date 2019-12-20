@@ -22,6 +22,9 @@ type testSpecial struct {
 	CDur Duration         `json:"cdur"`
 	Time time.Time        `json:"time"`
 	Durs *[]time.Duration `json:"durs"`
+	Sub  *struct {
+		Hi bool `json:"hi"`
+	} `json:"sub"`
 }
 
 func TestParseENV(t *testing.T) {
@@ -37,6 +40,10 @@ func TestParseENV(t *testing.T) {
 	testThingENV(a)
 	testOscureENV(a)
 	testSpecialENV(a)
+	f := true
+	g := &f
+	ParseENV(g, "OOO")
+
 }
 
 func testThingENV(a *assert.Assertions) {
@@ -106,6 +113,7 @@ func testSpecialENV(a *assert.Assertions) {
 	os.Setenv("TEST_DUR", "1m")
 	os.Setenv("TEST_CDUR", "1s")
 	os.Setenv("TEST_TIME", "2019-12-18T00:35:49+08:00")
+	os.Setenv("TEST_SUB_HI", "true")
 
 	c := &testSpecial{}
 	ok, err := ParseENV(c, "TEST")
@@ -114,6 +122,7 @@ func testSpecialENV(a *assert.Assertions) {
 	a.Nil(err)
 	a.Equal(time.Minute, c.Dur)
 	a.Equal(time.Second, c.CDur.Duration)
+	a.True(c.Sub.Hi)
 	a.Nil(c.Durs)
 }
 
