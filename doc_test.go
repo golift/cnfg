@@ -6,21 +6,21 @@ import (
 	"time"
 )
 
-// Complete working example for ParseENV()
-func ExampleParseENV_simple() {
+// Complete working example for UnmarshalENV()
+func ExampleUnmarshalENV_simple() {
 	// Systems is used to show an example of how to access nested slices.
 	type System struct {
-		Name   string `xml:"name"`
-		Signal *[]int `xml:"signal"`
+		Name   string `env:"name"`
+		Signal *[]int `env:"signal"`
 	}
 
 	// Config represents your application's environment variable based config inputs.
 	// Works with or without pointers.
 	type Config struct {
-		Debug    bool           `xml:"debug"`
-		Users    []string       `xml:"user"`
-		Interval *time.Duration `xml:"interval"`
-		Systems  []*System      `xml:"system"`
+		Debug    bool           `env:"debug"`
+		Users    []string       `env:"user"`
+		Interval *time.Duration `env:"interval"`
+		Systems  []*System      `env:"system"`
 	}
 
 	// Make a pointer to your struct with some default data.
@@ -46,12 +46,8 @@ func ExampleParseENV_simple() {
 	fmt.Printf("BEFORE => Debug: %v, Interval: %v, Users: %v, Systems: %v\n",
 		c.Debug, c.Interval, c.Users, c.Systems)
 
-	// We change the default of "json" to "xml".
-	// XML tag names are singular and look better as env variables.
-	ENVTag = "xml"
-
-	// Run ParseENV to parse the values into your config pointer:
-	ok, err := ParseENV(c, "APP")
+	// Run UnmarshalENV to parse the values into your config pointer:
+	ok, err := (&ENV{Tag: "env", Pfx: "APP"}).UnmarshalENV(c)
 	if err != nil {
 		panic(err)
 	}

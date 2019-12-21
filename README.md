@@ -37,7 +37,7 @@ type Config struct {
 }
 ```
 The above struct can be configured with the following environment variables,
-assuming you set `prefix := "APP"` when you call `ParseENV()`. Slices use env
+assuming you set `prefix := "APP"` when you call `UnmarshalENV()`. Slices use env
 vars with numbers in them, starting at 0 and going to infinity, or the last env
 var provided + 1, whichever comes first. It just works. The `...` and `++` indicate
 that those parameters belong to slices, and many items may be appended or overridden.

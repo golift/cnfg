@@ -16,8 +16,8 @@ type TimeX struct {
 var _ ENVUnmarshaler = (*TimeX)(nil)
 
 type Config struct {
-	Name    string `json:"name"`
-	Special TimeX  `json:"in"`
+	Name    string `xml:"name"`
+	Special TimeX  `xml:"in"`
 }
 
 func (t *TimeX) UnmarshalENV(tag, val string) error {
@@ -52,7 +52,7 @@ func ExampleENVUnmarshaler() {
 	os.Setenv("APP_IN_X", "10")
 	os.Setenv("APP_NAME", "myApp")
 
-	_, err := ParseENV(c, "APP")
+	_, err := UnmarshalENV(c, "APP")
 	if err != nil {
 		panic(err)
 	}

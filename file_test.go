@@ -25,7 +25,7 @@ type testSubConfig struct {
 	FloatP  *float64 `json:"float" xml:"float" yaml:"float" toml:"float"`
 }
 
-func testParseFileValues(a *assert.Assertions, c *testStruct, err error, from string) {
+func testUnmarshalFileValues(a *assert.Assertions, c *testStruct, err error, from string) {
 	from += " "
 
 	a.Nil(err, "there should not be an error reading the test file")
@@ -69,54 +69,54 @@ func testParseFileValues(a *assert.Assertions, c *testStruct, err error, from st
 	a.Nil(c.PointerStruct2, from+"pointer struct 2 must be nil")
 }
 
-func TestParseFileErrors(t *testing.T) {
+func TestUnmarshalFileErrors(t *testing.T) {
 	t.Parallel()
 
 	a := assert.New(t)
 	c := &testStruct{}
 
-	err := ParseFile(c, "/etc/passwd")
+	err := UnmarshalFile(c, "/etc/passwd")
 	a.NotNil(err, "there should be an error parsing a password file")
 
-	err = ParseFile(c, "no file here")
+	err = UnmarshalFile(c, "no file here")
 	a.NotNil(err, "there should be an error parsing a missing file")
 }
 
-func TestParseFileJSON(t *testing.T) {
+func TestUnmarshalFileJSON(t *testing.T) {
 	t.Parallel()
 
 	a := assert.New(t)
 	c := &testStruct{}
-	err := ParseFile(c, "tests/config.json")
-	testParseFileValues(a, c, err, "TestParseFileJSON")
+	err := UnmarshalFile(c, "tests/config.json")
+	testUnmarshalFileValues(a, c, err, "TestUnmarshalFileJSON")
 }
 
-func TestParseFileXML(t *testing.T) {
+func TestUnmarshalFileXML(t *testing.T) {
 	t.Parallel()
 
 	a := assert.New(t)
 	c := &testStruct{}
 
-	err := ParseFile(c, "tests/config.xml")
-	testParseFileValues(a, c, err, "TestParseFileXML")
+	err := UnmarshalFile(c, "tests/config.xml")
+	testUnmarshalFileValues(a, c, err, "TestUnmarshalFileXML")
 }
 
-func TestParseFileYAML(t *testing.T) {
+func TestUnmarshalFileYAML(t *testing.T) {
 	t.Parallel()
 
 	a := assert.New(t)
 	c := &testStruct{}
 
-	err := ParseFile(c, "tests/config.yaml")
-	testParseFileValues(a, c, err, "TestParseFileYAML")
+	err := UnmarshalFile(c, "tests/config.yaml")
+	testUnmarshalFileValues(a, c, err, "TestUnmarshalFileYAML")
 }
 
-func TestParseFileTOML(t *testing.T) {
+func TestUnmarshalFileTOML(t *testing.T) {
 	t.Parallel()
 
 	a := assert.New(t)
 	c := &testStruct{}
 
-	err := ParseFile(c, "tests/config.toml")
-	testParseFileValues(a, c, err, "TestParseFileTOML")
+	err := UnmarshalFile(c, "tests/config.toml")
+	testUnmarshalFileValues(a, c, err, "TestUnmarshalFileTOML")
 }

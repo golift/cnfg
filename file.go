@@ -10,22 +10,32 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-// ParseFile parses a configuration file (of any format) into a config struct.
+// UnmarshalFile parses a configuration file (of any format) into a config struct.
 // This is a shorthand method for calling Unmarshal against the json, xml, yaml
 // or toml packages. If the file name contains an appropriate suffix it is
 // unmarshaled with the corresponding package. If the suffix is missing, TOML
-// is assumed.
-func ParseFile(c interface{}, configFile string) error {
-	switch buf, err := ioutil.ReadFile(configFile); {
-	case err != nil:
-		return err
-	case strings.Contains(configFile, ".json"):
-		return json.Unmarshal(buf, c)
-	case strings.Contains(configFile, ".xml"):
-		return xml.Unmarshal(buf, c)
-	case strings.Contains(configFile, ".yaml"):
-		return yaml.Unmarshal(buf, c)
-	default:
-		return toml.Unmarshal(buf, c)
+// is assumed. Works with multiple files, so you can have stacked configurations.
+func UnmarshalFile(c interface{}, configFile ...string) error {
+	for _, f := range configFile {
+		buf, err := ioutil.ReadFile(f)
+
+		switch {
+		case err != nil:
+			return err
+		case strings.Contains(f, ".json"):
+			err = json.Unmarshal(buf, c)
+		case strings.Contains(f, ".xml"):
+			err = xml.Unmarshal(buf, c)
+		case strings.Contains(f, ".yaml"):
+			err = yaml.Unmarshal(buf, c)
+		default:
+			err = toml.Unmarshal(buf, c)
+		}
+
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }

@@ -1,6 +1,8 @@
 package cnfg
 
 import (
+	"net"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -11,39 +13,45 @@ import (
 /* ~90% code coverage. */
 
 type testObscure struct {
-	FloatSlice []float32        `json:"is"`
-	UintSliceP []*uint16        `json:"uis"`
-	Weirdo     *[]int           `json:"psi"`
-	Wut        *[]testSubConfig `json:"wut"`
+	FloatSlice []float32        `xml:"is"`
+	UintSliceP []*uint16        `xml:"uis"`
+	Weirdo     *[]int           `xml:"psi"`
+	Wut        *[]testSubConfig `xml:"wut"`
 }
 
 type testSpecial struct {
-	Dur  time.Duration    `json:"dur"`
-	CDur Duration         `json:"cdur"`
-	Time time.Time        `json:"time"`
-	Durs *[]time.Duration `json:"durs"`
+	Dur  time.Duration    `xml:"dur"`
+	CDur Duration         `xml:"cdur"`
+	Time time.Time        `xml:"time"`
+	Durs *[]time.Duration `xml:"durs"`
 	Sub  *struct {
-		Hi bool `json:"hi"`
-	} `json:"sub"`
+		URL url.URL `xml:"url"`
+		IP  net.IP  `xml:"ip"`
+	} `xml:"sub"`
 }
 
-func TestParseENV(t *testing.T) {
+type testBroken struct {
+	Broke2 []error `xml:"broke2"`
+}
+
+func TestUnmarshalENV(t *testing.T) {
 	// do not run this in parallel with other tests that change environment variables
 	t.Parallel()
 
 	a := assert.New(t)
-
 	c := &testStruct{}
-	ok, err := ParseENV(c, "PRE")
+	ok, err := UnmarshalENV(c, "PRE")
+
 	a.Nil(err, "there must not be an error when parsing no variables")
 	a.False(ok, "there are no environment variables set, so ok should be false")
 	testThingENV(a)
 	testOscureENV(a)
 	testSpecialENV(a)
+
 	f := true
 	g := &f
-	ParseENV(g, "OOO")
-
+	_, err = UnmarshalENV(g, "OOO")
+	a.NotNil(err, "unmarshaling a non-struct pointer must produce an error")
 }
 
 func testThingENV(a *assert.Assertions) {
@@ -59,13 +67,13 @@ func testThingENV(a *assert.Assertions) {
 
 	c := &testStruct{}
 
-	ok, err := ParseENV(c, "PRE")
+	ok, err := UnmarshalENV(c, "PRE")
 	a.True(ok, "ok must be true since things must be parsed")
-	testParseFileValues(a, c, err, "testThingENV")
+	testUnmarshalFileValues(a, c, err, "testThingENV")
 	// do it again, and we should get the same result
-	ok, err = ParseENV(c, "PRE")
+	ok, err = UnmarshalENV(c, "PRE")
 	a.True(ok, "ok must be true since things must be parsed")
-	testParseFileValues(a, c, err, "testThingENV")
+	testUnmarshalFileValues(a, c, err, "testThingENV")
 }
 
 func testOscureENV(a *assert.Assertions) {
@@ -81,7 +89,7 @@ func testOscureENV(a *assert.Assertions) {
 
 	c := &testObscure{}
 	testit := func() {
-		ok, err := ParseENV(c, "OB")
+		ok, err := UnmarshalENV(c, "OB")
 		a.True(ok, "ok must be true since things must be parsed")
 		a.Nil(err)
 
@@ -108,21 +116,34 @@ func testOscureENV(a *assert.Assertions) {
 	testit() // twice to make sure it's idempotent
 }
 
+func TestBrokenENV(t *testing.T) {
+	os.Setenv("TEST_BROKE2_0", "foo")
+
+	a := assert.New(t)
+	c := &testBroken{}
+	ok, err := UnmarshalENV(c, "TEST")
+
+	a.NotNil(err, "an error must be returned for an unsupported type")
+	a.False(ok)
+}
+
 func testSpecialENV(a *assert.Assertions) {
 	os.Clearenv()
 	os.Setenv("TEST_DUR", "1m")
 	os.Setenv("TEST_CDUR", "1s")
 	os.Setenv("TEST_TIME", "2019-12-18T00:35:49+08:00")
-	os.Setenv("TEST_SUB_HI", "true")
+	os.Setenv("TEST_SUB_URL", "https://golift.io/cnfg?rad=true")
+	os.Setenv("TEST_SUB_IP", "123.45.67.89")
 
 	c := &testSpecial{}
-	ok, err := ParseENV(c, "TEST")
+	ok, err := (&ENV{Pfx: "TEST"}).UnmarshalENV(c)
 
 	a.True(ok, "ok must be true since things must be parsed")
 	a.Nil(err)
 	a.Equal(time.Minute, c.Dur)
 	a.Equal(time.Second, c.CDur.Duration)
-	a.True(c.Sub.Hi)
+	a.Equal("golift.io", c.Sub.URL.Host, "the url wasn't parsed properly")
+	a.Equal("123.45.67.89", c.Sub.IP.String(), "the IP wasn't parsed properly")
 	a.Nil(c.Durs)
 }
 
@@ -146,13 +167,13 @@ func TestParseInt(t *testing.T) {
 	}
 }
 
-func TestParseENVerrors(t *testing.T) {
+func TestUnmarshalENVerrors(t *testing.T) {
 	a := assert.New(t)
 
 	type tester struct {
 		unexpd map[string]string
-		Works  map[string]string `json:"works"`
-		Rad    map[string][]int  `json:"yup"`
+		Works  map[string]string `xml:"works"`
+		Rad    map[string][]int  `xml:"yup"`
 	}
 
 	os.Setenv("YO_WORKS_foostring", "fooval")
@@ -163,7 +184,7 @@ func TestParseENVerrors(t *testing.T) {
 	os.Setenv("YO_YUP_server100_0", "256")
 
 	c := tester{}
-	ok, err := ParseENV(&c, "YO")
+	ok, err := UnmarshalENV(&c, "YO")
 
 	a.Nil(err, "maps are supported and must not produce an error")
 	a.True(ok)
@@ -174,10 +195,10 @@ func TestParseENVerrors(t *testing.T) {
 	a.Equal([]int{256}, c.Rad["server100"])
 
 	type tester2 struct {
-		NotBroken  []map[string]string  `json:"broken"`
-		NotBroken2 []*map[string]string `json:"broken2"`
-		NotBroken3 []map[int]int        `json:"broken3"`
-		HasStuff   []map[string]string  `json:"stuff"`
+		NotBroken  []map[string]string  `xml:"broken"`
+		NotBroken2 []*map[string]string `xml:"broken2"`
+		NotBroken3 []map[int]int        `xml:"broken3"`
+		HasStuff   []map[string]string  `xml:"stuff"`
 	}
 
 	os.Setenv("MORE_BROKEN", "value")
@@ -188,7 +209,7 @@ func TestParseENVerrors(t *testing.T) {
 	os.Setenv("MORE_STUFF_0_a", "")
 
 	c2 := tester2{HasStuff: []map[string]string{{"freesoda": "at-pops"}, {"a": "v"}}}
-	ok, err = ParseENV(&c2, "MORE")
+	ok, err = UnmarshalENV(&c2, "MORE")
 
 	a.Nil(err, "map slices are supported and must not produce an error")
 	a.True(ok)

@@ -6,21 +6,25 @@ import (
 )
 
 // ENVTag is the tag to look for on struct members. You may choose to use a custom
-// tag by changing this. "env" is popular, "json" is default and "xml" works well
-// because XML tags are usually singular. Singular variable names work well for
-// bash environment variables.
-var ENVTag = "json"
-
-// IgnoreUnknown controls the error returned by ParseENV when you try to parse
-// unsupported types. As more types are added this becomes less of an issue.
-// Most types are supported, but if you run into an unexpected error, set this to true.
-// Setting this to true suppresses the error.
-var IgnoreUnknown bool
+// tag by creating an &ENV{} struct with a different Tag. "env" is popular, but I
+// chose "xml" because the nouns are generally singular, and those look good as
+// env variables. "xml" is also convenient because it's brief and doesn't add yet
+// another struct tag. Those lines can get long quickly.
+const ENVTag = "xml"
 
 // ENVUnmarshaler allows custom unmarshaling on a custom type.
 // If your type implements this, it will be called and the logic stops there.
 type ENVUnmarshaler interface {
 	UnmarshalENV(tag, envval string) error
+}
+
+// ENV allows you to parse environment variables using an object instead
+// of global state. This package allows using the default ENVTag from global
+// state, or you can pass in your own using this struct. See the UnmarshalENV
+// function (it's 1 line) for an example of how to use this.
+type ENV struct {
+	Tag string // Struct tag name.
+	Pfx string // ENV var prefix.
 }
 
 // satify goconst
