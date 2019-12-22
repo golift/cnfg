@@ -23,8 +23,9 @@ type ENVUnmarshaler interface {
 // state, or you can pass in your own using this struct. See the UnmarshalENV
 // function (it's 1 line) for an example of how to use this.
 type ENV struct {
-	Tag string // Struct tag name.
-	Pfx string // ENV var prefix.
+	Tag   string // Struct tag name.
+	Pfx   string // ENV var prefix.
+	pairs Pairs  // pairs of env variables (saved at start)
 }
 
 // satify goconst

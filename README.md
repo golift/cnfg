@@ -13,17 +13,17 @@ or an unsupported type.
 
 ```
 type Shelter struct {
-	Title  string    `json:"title"`
-	Sym    float64   `json:"sym"`
-	People []*Person `json:"people"`
-	Dogs   []*Dog    `json:"dogs"`
+	Title  string    `xml:"title"`
+	Sym    float64   `xml:"sym"`
+	People []*Person `xml:"people"`
+	Dogs   []*Dog    `xml:"dogs"`
 }
 
 type Person struct {
-	Name    string `json:"name"`
-	Present bool   `json:"present"`
-	Age     int    `json:"age"`
-	ID      int64  `json:"id"`
+	Name    string `xml:"name"`
+	Present bool   `xml:"present"`
+	Age     int    `xml:"age"`
+	ID      int64  `xml:"id"`
 }
 
 type Dog struct {
@@ -33,7 +33,7 @@ type Dog struct {
 }
 
 type Config struct {
-	*Shelter `json:"shelter"`
+	*Shelter `xml:"shelter"`
 }
 ```
 The above struct can be configured with the following environment variables,
@@ -64,6 +64,7 @@ APP_SHELTER_DOGS_1_OWNERS_0
 APP_SHELTER_DOGS_1_OWNERS_1 ++
 ```
 If you passed in the `Shelter` struct instead of `Config`, all the of the `SHELTER_`
-portions of the tags would be omitted. You can also set which struct tag to use with
-`config.ENVTag` - it defaults to `"json"`, but you could set it to `"env"` and make
-custom names for env variables.
+portions of the tags would be omitted. You can also set which struct tag to use by
+creating an `&ENV{}` pointer and setting `Tag` and/or `Pfx` . `Tag` defaults to
+`"xml"`, but you could set it to `"env"` and make custom names for env variables.
+The env var prefix `Pfx` is optional, but recommended.

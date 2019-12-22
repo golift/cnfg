@@ -10,114 +10,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-/* ~90% code coverage. */
-
-type testObscure struct {
-	FloatSlice []float32        `xml:"is"`
-	UintSliceP []*uint16        `xml:"uis"`
-	Weirdo     *[]int           `xml:"psi"`
-	Wut        *[]testSubConfig `xml:"wut"`
-}
-
-type testSpecial struct {
-	Dur  time.Duration    `xml:"dur"`
-	CDur Duration         `xml:"cdur"`
-	Time time.Time        `xml:"time"`
-	Durs *[]time.Duration `xml:"durs"`
-	Sub  *struct {
-		URL url.URL `xml:"url"`
-		IP  net.IP  `xml:"ip"`
-	} `xml:"sub"`
-}
-
-type testBroken struct {
-	Broke2 []error `xml:"broke2"`
-}
-
-func TestUnmarshalENV(t *testing.T) {
-	// do not run this in parallel with other tests that change environment variables
-	t.Parallel()
-
-	a := assert.New(t)
-	c := &testStruct{}
-	ok, err := UnmarshalENV(c, "PRE")
-
-	a.Nil(err, "there must not be an error when parsing no variables")
-	a.False(ok, "there are no environment variables set, so ok should be false")
-	testThingENV(a)
-	testOscureENV(a)
-	testSpecialENV(a)
-
-	f := true
-	g := &f
-	_, err = UnmarshalENV(g, "OOO")
-	a.NotNil(err, "unmarshaling a non-struct pointer must produce an error")
-}
-
-func testThingENV(a *assert.Assertions) {
-	os.Clearenv()
-	os.Setenv("PRE_PSLICE_0_BOOL", "true")
-	os.Setenv("PRE_PSLICE_0_FLOAT", "123.4567")
-
-	os.Setenv("PRE_SSLICE_0_STRING", "foo")
-	os.Setenv("PRE_SSLICE_0_INT", "123")
-
-	os.Setenv("PRE_STRUCT_BOOL", "false")
-	os.Setenv("PRE_PSTRUCT_STRING", "foo2")
-
-	c := &testStruct{}
-
-	ok, err := UnmarshalENV(c, "PRE")
-	a.True(ok, "ok must be true since things must be parsed")
-	testUnmarshalFileValues(a, c, err, "testThingENV")
-	// do it again, and we should get the same result
-	ok, err = UnmarshalENV(c, "PRE")
-	a.True(ok, "ok must be true since things must be parsed")
-	testUnmarshalFileValues(a, c, err, "testThingENV")
-}
-
-func testOscureENV(a *assert.Assertions) {
-	os.Clearenv()
-	os.Setenv("OB_IS_0", "-5")
-	os.Setenv("OB_IS_1", "8")
-
-	os.Setenv("OB_UIS_0", "12")
-	os.Setenv("OB_UIS_1", "22")
-
-	os.Setenv("OB_PSI_0", "-1")
-	os.Setenv("OB_WUT_0_BOOL", "true")
-
-	c := &testObscure{}
-	testit := func() {
-		ok, err := UnmarshalENV(c, "OB")
-		a.True(ok, "ok must be true since things must be parsed")
-		a.Nil(err)
-
-		a.EqualValues(2, len(c.FloatSlice))
-		a.EqualValues(-5, c.FloatSlice[0])
-		a.EqualValues(8, c.FloatSlice[1])
-
-		a.EqualValues(2, len(c.UintSliceP))
-		a.EqualValues(12, *c.UintSliceP[0])
-		a.EqualValues(22, *c.UintSliceP[1])
-
-		a.NotNil(c.Weirdo)
-		a.NotNil(c.Wut)
-
-		weirdo := *c.Weirdo
-		wut := *c.Wut
-
-		a.EqualValues(1, len(weirdo))
-		a.EqualValues(-1, weirdo[0])
-		a.EqualValues(1, len(wut))
-		a.True(wut[0].Bool)
-	}
-	testit()
-	testit() // twice to make sure it's idempotent
-}
+/* ~95% code coverage. */
 
 func TestBrokenENV(t *testing.T) {
-	os.Setenv("TEST_BROKE2_0", "foo")
+	type testBroken struct {
+		Broke []error `xml:"broke"`
+	}
+
+	type testBroken2 struct {
+		Broke map[error]string `xml:"broke"`
+	}
+
+	type testBroken3 struct {
+		Broke map[string]error `xml:"broke"`
+	}
+	os.Setenv("TEST_BROKE_0", "foo")
+	os.Setenv("TEST_BROKE_broke", "foo")
 
 	a := assert.New(t)
 	c := &testBroken{}
@@ -125,46 +33,18 @@ func TestBrokenENV(t *testing.T) {
 
 	a.NotNil(err, "an error must be returned for an unsupported type")
 	a.False(ok)
-}
 
-func testSpecialENV(a *assert.Assertions) {
-	os.Clearenv()
-	os.Setenv("TEST_DUR", "1m")
-	os.Setenv("TEST_CDUR", "1s")
-	os.Setenv("TEST_TIME", "2019-12-18T00:35:49+08:00")
-	os.Setenv("TEST_SUB_URL", "https://golift.io/cnfg?rad=true")
-	os.Setenv("TEST_SUB_IP", "123.45.67.89")
+	c2 := &testBroken2{}
+	ok, err = UnmarshalENV(c2, "TEST")
 
-	c := &testSpecial{}
-	ok, err := (&ENV{Pfx: "TEST"}).UnmarshalENV(c)
+	a.NotNil(err, "an error must be returned for an unsupported map type")
+	a.False(ok)
 
-	a.True(ok, "ok must be true since things must be parsed")
-	a.Nil(err)
-	a.Equal(time.Minute, c.Dur)
-	a.Equal(time.Second, c.CDur.Duration)
-	a.Equal("golift.io", c.Sub.URL.Host, "the url wasn't parsed properly")
-	a.Equal("123.45.67.89", c.Sub.IP.String(), "the IP wasn't parsed properly")
-	a.Nil(c.Durs)
-}
+	c3 := &testBroken3{}
+	ok, err = UnmarshalENV(c3, "TEST")
 
-func TestParseInt(t *testing.T) {
-	t.Parallel()
-
-	a := assert.New(t)
-
-	for _, t := range []string{typeUINT, typeUINT8, typeUINT16, typeUINT32, typeUINT64} {
-		i, err := parseUint(t, "1")
-
-		a.Equal(uint64(1), i)
-		a.Nil(err)
-	}
-
-	for _, t := range []string{typeINT, typeINT8, typeINT16, typeINT32, typeINT64} {
-		i, err := parseInt(t, "1")
-
-		a.Equal(int64(1), i)
-		a.Nil(err)
-	}
+	a.NotNil(err, "an error must be returned for an unsupported map type")
+	a.False(ok)
 }
 
 func TestUnmarshalENVerrors(t *testing.T) {
@@ -221,4 +101,125 @@ func TestUnmarshalENVerrors(t *testing.T) {
 	a.EqualValues("at-pops", c2.HasStuff[0]["freetime"])
 	a.EqualValues("", c2.HasStuff[0]["a"], "the empty map value must be set when the env var is empty")
 	a.Nil(c2.NotBroken3, "a nil map without overrides must remain nil")
+}
+
+func TestUnmarshalENV(t *testing.T) {
+	// do not run this in parallel with other tests that change environment variables
+	t.Parallel()
+
+	a := assert.New(t)
+	c := &testStruct{}
+	ok, err := UnmarshalENV(c, "PRE")
+
+	a.Nil(err, "there must not be an error when parsing no variables")
+	a.False(ok, "there are no environment variables set, so ok should be false")
+	testThingENV(a)
+	testOscureENV(a)
+	testSpecialENV(a)
+
+	f := true
+	g := &f
+	_, err = UnmarshalENV(g, "OOO")
+	a.NotNil(err, "unmarshaling a non-struct pointer must produce an error")
+}
+
+func testThingENV(a *assert.Assertions) {
+	os.Clearenv()
+	os.Setenv("PRE_PSLICE_0_BOOL", "true")
+	os.Setenv("PRE_PSLICE_0_FLOAT", "123.4567")
+
+	os.Setenv("PRE_SSLICE_0_STRING", "foo")
+	os.Setenv("PRE_SSLICE_0_INT", "123")
+
+	os.Setenv("PRE_STRUCT_BOOL", "false")
+	os.Setenv("PRE_PSTRUCT_STRING", "foo2")
+
+	c := &testStruct{}
+
+	ok, err := UnmarshalENV(c, "PRE")
+	a.True(ok, "ok must be true since things must be parsed")
+	testUnmarshalFileValues(a, c, err, "testThingENV")
+	// do it again, and we should get the same result
+	ok, err = UnmarshalENV(c, "PRE")
+	a.True(ok, "ok must be true since things must be parsed")
+	testUnmarshalFileValues(a, c, err, "testThingENV")
+}
+
+func testOscureENV(a *assert.Assertions) {
+
+	type testObscure struct {
+		FloatSlice []float32        `xml:"is"`
+		UintSliceP []*uint16        `xml:"uis"`
+		Weirdo     *[]int           `xml:"psi"`
+		Wut        *[]testSubConfig `xml:"wut"`
+	}
+
+	os.Clearenv()
+	os.Setenv("OB_IS_0", "-5")
+	os.Setenv("OB_IS_1", "8")
+
+	os.Setenv("OB_UIS_0", "12")
+	os.Setenv("OB_UIS_1", "22")
+
+	os.Setenv("OB_PSI_0", "-1")
+	os.Setenv("OB_WUT_0_BOOL", "true")
+
+	c := &testObscure{}
+	testit := func() {
+		ok, err := UnmarshalENV(c, "OB")
+		a.True(ok, "ok must be true since things must be parsed")
+		a.Nil(err)
+
+		a.EqualValues(2, len(c.FloatSlice))
+		a.EqualValues(-5, c.FloatSlice[0])
+		a.EqualValues(8, c.FloatSlice[1])
+
+		a.EqualValues(2, len(c.UintSliceP))
+		a.EqualValues(12, *c.UintSliceP[0])
+		a.EqualValues(22, *c.UintSliceP[1])
+
+		a.NotNil(c.Weirdo)
+		a.NotNil(c.Wut)
+
+		weirdo := *c.Weirdo
+		wut := *c.Wut
+
+		a.EqualValues(1, len(weirdo))
+		a.EqualValues(-1, weirdo[0])
+		a.EqualValues(1, len(wut))
+		a.True(wut[0].Bool)
+	}
+	testit()
+	testit() // twice to make sure it's idempotent
+}
+
+func testSpecialENV(a *assert.Assertions) {
+	type testSpecial struct {
+		Dur  time.Duration    `xml:"dur"`
+		CDur Duration         `xml:"cdur"`
+		Time time.Time        `xml:"time"`
+		Durs *[]time.Duration `xml:"durs"`
+		Sub  *struct {
+			URL url.URL `xml:"url"`
+			IP  net.IP  `xml:"ip"`
+		} `xml:"sub"`
+	}
+
+	os.Clearenv()
+	os.Setenv("TEST_DUR", "1m")
+	os.Setenv("TEST_CDUR", "1s")
+	os.Setenv("TEST_TIME", "2019-12-18T00:35:49+08:00")
+	os.Setenv("TEST_SUB_URL", "https://golift.io/cnfg?rad=true")
+	os.Setenv("TEST_SUB_IP", "123.45.67.89")
+
+	c := &testSpecial{}
+	ok, err := (&ENV{Pfx: "TEST"}).UnmarshalENV(c)
+
+	a.True(ok, "ok must be true since things must be parsed")
+	a.Nil(err)
+	a.Equal(time.Minute, c.Dur)
+	a.Equal(time.Second, c.CDur.Duration)
+	a.Equal("golift.io", c.Sub.URL.Host, "the url wasn't parsed properly")
+	a.Equal("123.45.67.89", c.Sub.IP.String(), "the IP wasn't parsed properly")
+	a.Nil(c.Durs)
 }
