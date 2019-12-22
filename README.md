@@ -4,12 +4,14 @@
 
 
 Procedures for parsing configs files and environment variables into data structures.
-
+Works a whole lot like `json.Unmarshal`
 Quick explanation on how the env variable mapping works below.
 See [GODOC](https://godoc.org/golift.io/cnfg) for a working code example.
 
-Supports almost every possible type. Please open an issue if you run into a bug
-or an unsupported type.
+Supports almost every possible type, including slices, maps, slices of maps,
+maps of slices, pointers of slices to maps of slices!
+
+Please open an issue if you run into a bug or an unsupported type.
 
 ```
 type Shelter struct {
