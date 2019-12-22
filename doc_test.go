@@ -7,7 +7,7 @@ import (
 )
 
 // Complete working example for UnmarshalENV()
-func ExampleUnmarshalENV_simple() {
+func ExampleENV_Unmarshal_simple() {
 	// Systems is used to show an example of how to access nested slices.
 	type System struct {
 		Name   string `env:"name"`
@@ -46,8 +46,8 @@ func ExampleUnmarshalENV_simple() {
 	fmt.Printf("BEFORE => Debug: %v, Interval: %v, Users: %v, Systems: %v\n",
 		c.Debug, c.Interval, c.Users, c.Systems)
 
-	// Run UnmarshalENV to parse the values into your config pointer:
-	ok, err := (&ENV{Tag: "env", Pfx: "APP"}).UnmarshalENV(c)
+	// Run Unmarshal to parse the values into your config pointer:
+	ok, err := (&ENV{Tag: "env", Pfx: "APP"}).Unmarshal(c)
 	if err != nil {
 		panic(err)
 	}

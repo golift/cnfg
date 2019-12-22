@@ -214,7 +214,7 @@ func testSpecialENV(a *assert.Assertions) {
 	os.Setenv("TEST_SUB_IP", "123.45.67.89")
 
 	c := &testSpecial{}
-	ok, err := (&ENV{Pfx: "TEST"}).UnmarshalENV(c)
+	ok, err := (&ENV{Pfx: "TEST"}).Unmarshal(c)
 
 	a.True(ok, "ok must be true since things must be parsed")
 	a.Nil(err)
