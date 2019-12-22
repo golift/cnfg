@@ -9,13 +9,17 @@ import (
 	"time"
 )
 
-// parseStruct does most of the heavy lifting. Called every time a struct is encountered.
-func (e *ENV) parseStruct(field reflect.Value, prefix string) (bool, error) {
+/* This file contains all the logic to parse a data structure
+   using reflection tags from a map of keys and values. */
+
+// Struct does most of the heavy lifting. Called every time a struct is encountered.
+// The entire process begins here. It's very recursive.
+func (p *parse) Struct(field reflect.Value, prefix string) (bool, error) {
 	var exitOk bool
 
 	t := field.Type().Elem()
 	for i := 0; i < t.NumField(); i++ { // Loop each struct member
-		shorttag := strings.Split(strings.ToUpper(t.Field(i).Tag.Get(e.Tag)), ",")[0]
+		shorttag := strings.Split(strings.ToUpper(t.Field(i).Tag.Get(string(p.Tag))), ",")[0]
 		if !field.Elem().Field(i).CanSet() || shorttag == "-" || shorttag == "" {
 			continue // This _only_ works with reflection tags.
 		}
@@ -25,8 +29,8 @@ func (e *ENV) parseStruct(field reflect.Value, prefix string) (bool, error) {
 			tag = shorttag
 		}
 
-		envval, ok := e.pairs[tag]
-		if exists, err := e.parseAnything(field.Elem().Field(i), tag, envval, ok); err != nil {
+		envval, ok := p.Vals[tag]
+		if exists, err := p.Anything(field.Elem().Field(i), tag, envval, ok); err != nil {
 			return false, err
 		} else if exists {
 			exitOk = true
@@ -36,9 +40,9 @@ func (e *ENV) parseStruct(field reflect.Value, prefix string) (bool, error) {
 	return exitOk, nil
 }
 
-func (e *ENV) parseAnything(field reflect.Value, tag, envval string, force bool) (bool, error) {
-	//	log.Println("parseAnything", envval, tag, field.Kind(), field.Type(), field.Interface())
-	if exists, err := e.checkInterface(field, tag, envval); err != nil {
+func (p *parse) Anything(field reflect.Value, tag, envval string, force bool) (bool, error) {
+	//	log.Println("Anything", envval, tag, field.Kind(), field.Type(), field.Interface())
+	if exists, err := p.Interface(field, tag, envval); err != nil {
 		return false, err
 	} else if exists {
 		return true, nil
@@ -46,23 +50,23 @@ func (e *ENV) parseAnything(field reflect.Value, tag, envval string, force bool)
 
 	switch field.Kind() {
 	case reflect.Ptr:
-		return e.parsePointer(field, tag, envval)
+		return p.Pointer(field, tag, envval)
 	case reflect.Struct:
-		return e.parseStruct(field.Addr(), tag)
+		return p.Struct(field.Addr(), tag)
 	case reflect.Slice:
-		return e.parseSlice(field, tag)
+		return p.Slice(field, tag)
 	case reflect.Map:
-		return e.parseMap(field, tag)
+		return p.Map(field, tag)
 	default:
 		if !force && envval == "" {
 			return false, nil
 		}
 
-		return e.parseMember(field, tag, envval)
+		return p.Member(field, tag, envval)
 	}
 }
 
-func (e *ENV) parsePointer(field reflect.Value, tag, envval string) (ok bool, err error) {
+func (p *parse) Pointer(field reflect.Value, tag, envval string) (ok bool, err error) {
 	value := reflect.New(field.Type().Elem())
 	if field.Elem().CanAddr() {
 		// if the pointer already has a value, copy it instead of use the new one.
@@ -70,7 +74,7 @@ func (e *ENV) parsePointer(field reflect.Value, tag, envval string) (ok bool, er
 	}
 
 	// Pass the non-pointer element back into the start.
-	ok, err = e.parseAnything(value.Elem(), tag, envval, false)
+	ok, err = p.Anything(value.Elem(), tag, envval, false)
 	if ok {
 		// overwrite the pointer only if something was parsed.
 		field.Set(value)
@@ -79,7 +83,7 @@ func (e *ENV) parsePointer(field reflect.Value, tag, envval string) (ok bool, er
 	return ok, err
 }
 
-func (e *ENV) checkInterface(field reflect.Value, tag, envval string) (bool, error) {
+func (p *parse) Interface(field reflect.Value, tag, envval string) (bool, error) {
 	if !field.CanAddr() || !field.Addr().CanInterface() {
 		return false, nil
 	}
@@ -110,8 +114,8 @@ func (e *ENV) checkInterface(field reflect.Value, tag, envval string) (bool, err
 	return false, nil
 }
 
-// parseMember parses non-struct, non-slice struct-member types.
-func (e *ENV) parseMember(field reflect.Value, tag, envval string) (bool, error) {
+// Member parses non-struct, non-slice struct-member types.
+func (p *parse) Member(field reflect.Value, tag, envval string) (bool, error) {
 	var err error
 
 	switch fieldType := field.Type().String(); fieldType {
@@ -149,10 +153,11 @@ func (e *ENV) parseMember(field reflect.Value, tag, envval string) (bool, error)
 
 		val, err = strconv.ParseBool(envval)
 		field.SetBool(val)
+
 	default:
 		var ok bool
 
-		if ok, err = e.checkInterface(field, tag, envval); err == nil && !ok {
+		if ok, err = p.Interface(field, tag, envval); err == nil && !ok {
 			err = fmt.Errorf("unsupported type: %v (val: %s) - please report this if "+
 				"you think this type should be supported", field.Type(), envval)
 		}
@@ -165,12 +170,12 @@ func (e *ENV) parseMember(field reflect.Value, tag, envval string) (bool, error)
 	return true, nil
 }
 
-func (e *ENV) parseSlice(field reflect.Value, tag string) (bool, error) {
+func (p *parse) Slice(field reflect.Value, tag string) (bool, error) {
 	value := field
 
 	reflect.Copy(value, field)
 
-	ok, err := e.parseSliceValue(value, tag)
+	ok, err := p.SliceValue(value, tag)
 	if ok {
 		field.Set(value) // Overwrite the slice.
 	}
@@ -178,13 +183,13 @@ func (e *ENV) parseSlice(field reflect.Value, tag string) (bool, error) {
 	return ok, err
 }
 
-func (e *ENV) parseSliceValue(field reflect.Value, tag string) (bool, error) {
+func (p *parse) SliceValue(field reflect.Value, tag string) (bool, error) {
 	var ok bool
 
 	total := field.Len()
 	for i := 0; i <= total; i++ {
 		ntag := strings.Join([]string{tag, strconv.Itoa(i)}, "_")
-		envval, exists := e.pairs[ntag]
+		envval, exists := p.Vals[ntag]
 
 		// Start with a blank value for this item
 		value := reflect.Indirect(reflect.New(field.Type().Elem()))
@@ -193,7 +198,7 @@ func (e *ENV) parseSliceValue(field reflect.Value, tag string) (bool, error) {
 			value = reflect.Indirect(field.Index(i).Addr())
 		}
 
-		if exists, err := e.parseAnything(value, ntag, envval, exists); err != nil {
+		if exists, err := p.Anything(value, ntag, envval, exists); err != nil {
 			return false, err
 		} else if !exists {
 			continue
@@ -217,10 +222,10 @@ func (e *ENV) parseSliceValue(field reflect.Value, tag string) (bool, error) {
 	return ok, nil
 }
 
-func (e *ENV) parseMap(field reflect.Value, tag string) (bool, error) {
+func (p *parse) Map(field reflect.Value, tag string) (bool, error) {
 	var ok bool
 
-	vals := e.pairs.Filter(tag)
+	vals := p.Vals.Get(tag)
 	if len(vals) < 1 {
 		return false, nil
 	}
@@ -232,7 +237,7 @@ func (e *ENV) parseMap(field reflect.Value, tag string) (bool, error) {
 	for k, v := range vals {
 		keyval := reflect.Indirect(reflect.New(field.Type().Key()))
 
-		if _, err := e.parseAnything(keyval, tag, k, true); err != nil {
+		if _, err := p.Anything(keyval, tag, k, true); err != nil {
 			return false, err
 		}
 
@@ -247,7 +252,7 @@ func (e *ENV) parseMap(field reflect.Value, tag string) (bool, error) {
 
 		valval := reflect.Indirect(reflect.New(field.Type().Elem()))
 
-		exists, err := e.parseAnything(valval, strings.Join([]string{tag, k}, "_"), v, true)
+		exists, err := p.Anything(valval, strings.Join([]string{tag, k}, "_"), v, true)
 		if err != nil {
 			return false, err
 		}

@@ -21,12 +21,12 @@ func (e *ENV) UnmarshalENV(i interface{}) (bool, error) {
 		return false, fmt.Errorf("can only unmarshal ENV into pointer to struct")
 	}
 
-	// Save the current environment.
-	e.pairs = MapEnvPairs(e.Pfx, os.Environ())
-
 	if e.Tag == "" {
 		e.Tag = ENVTag
 	}
 
-	return e.parseStruct(value, e.Pfx)
+	// Save the current environment.
+	parse := &parse{Tag: e.Tag, Vals: MapEnvPairs(e.Pfx, os.Environ())}
+
+	return parse.Struct(value, e.Pfx)
 }
