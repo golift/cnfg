@@ -38,7 +38,7 @@ func UnmarshalMap(pairs map[string]string, i interface{}) (bool, error) {
 func (e *ENV) UnmarshalMap(pairs map[string]string, i interface{}) (bool, error) {
 	value := reflect.ValueOf(i)
 	if value.Kind() != reflect.Ptr || value.Elem().Kind() != reflect.Struct {
-		return false, fmt.Errorf("can only unmarshal ENV into pointer to struct")
+		return false, fmt.Errorf("can only unmarshal into pointer to struct")
 	}
 
 	if e.Tag == "" {

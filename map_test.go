@@ -35,5 +35,4 @@ func TestUnmarshalMap(t *testing.T) {
 	ok, err = (&ENV{}).UnmarshalMap(pairs, &i)
 	a.True(ok)
 	a.Nil(err)
-
 }

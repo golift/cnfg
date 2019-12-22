@@ -28,8 +28,8 @@ type ENV struct {
 }
 
 type parse struct {
-	Tag  string
-	Vals Pairs // pairs of env variables (saved at start)
+	Tag  string // struct tag to look for on struct values
+	Vals Pairs  // pairs of env variables (saved at start)
 }
 
 // satify goconst

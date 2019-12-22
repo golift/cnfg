@@ -24,6 +24,7 @@ func TestBrokenENV(t *testing.T) {
 	type testBroken3 struct {
 		Broke map[string]error `xml:"broke"`
 	}
+
 	os.Setenv("TEST_BROKE_0", "foo")
 	os.Setenv("TEST_BROKE_broke", "foo")
 
@@ -146,7 +147,6 @@ func testThingENV(a *assert.Assertions) {
 }
 
 func testOscureENV(a *assert.Assertions) {
-
 	type testObscure struct {
 		FloatSlice []float32        `xml:"is"`
 		UintSliceP []*uint16        `xml:"uis"`
@@ -189,6 +189,7 @@ func testOscureENV(a *assert.Assertions) {
 		a.EqualValues(1, len(wut))
 		a.True(wut[0].Bool)
 	}
+
 	testit()
 	testit() // twice to make sure it's idempotent
 }

@@ -19,7 +19,7 @@ func (p *parse) Struct(field reflect.Value, prefix string) (bool, error) {
 
 	t := field.Type().Elem()
 	for i := 0; i < t.NumField(); i++ { // Loop each struct member
-		shorttag := strings.Split(strings.ToUpper(t.Field(i).Tag.Get(string(p.Tag))), ",")[0]
+		shorttag := strings.Split(strings.ToUpper(t.Field(i).Tag.Get(p.Tag)), ",")[0]
 		if !field.Elem().Field(i).CanSet() || shorttag == "-" || shorttag == "" {
 			continue // This _only_ works with reflection tags.
 		}
@@ -153,7 +153,6 @@ func (p *parse) Member(field reflect.Value, tag, envval string) (bool, error) {
 
 		val, err = strconv.ParseBool(envval)
 		field.SetBool(val)
-
 	default:
 		var ok bool
 
