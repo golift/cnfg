@@ -227,4 +227,12 @@ func testSpecialENV(a *assert.Assertions) {
 	a.Equal("golift.io", c.Sub.URL.Host, "the url wasn't parsed properly")
 	a.Equal("123.45.67.89", c.Sub.IP.String(), "the IP wasn't parsed properly")
 	a.Nil(c.Durs)
+
+	os.Setenv("TEST_TIME", "not a real time")
+
+	c = &testSpecial{}
+	ok, err = (&ENV{Pfx: "TEST"}).Unmarshal(c)
+
+	a.False(ok, "cannot parse an invalid time")
+	a.NotNil(err, "cannot parse an invalid time")
 }

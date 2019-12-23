@@ -3,6 +3,7 @@ package cnfg
 import (
 	"encoding/json"
 	"encoding/xml"
+	"fmt"
 	"io/ioutil"
 	"strings"
 
@@ -16,6 +17,10 @@ import (
 // unmarshaled with the corresponding package. If the suffix is missing, TOML
 // is assumed. Works with multiple files, so you can have stacked configurations.
 func UnmarshalFile(c interface{}, configFile ...string) error {
+	if len(configFile) < 1 {
+		return fmt.Errorf("must provide at least 1 file to unmarshal")
+	}
+
 	for _, f := range configFile {
 		buf, err := ioutil.ReadFile(f)
 

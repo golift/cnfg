@@ -3,15 +3,19 @@
 [![Go Report Card](https://goreportcard.com/badge/golift.io/cnfg)](https://goreportcard.com/report/golift.io/cnfg)
 
 
-Procedures for parsing configs files and environment variables into data structures.
-Works a whole lot like `json.Unmarshal`
-Quick explanation on how the env variable mapping works below.
-See [GODOC](https://godoc.org/golift.io/cnfg) for a working code example.
+Procedures for parsing config files and environment variables into data structures.
+Works much like `json.Unmarshal`
+Short explanation on how the env variable mapping works below.
+See [GoDoc](https://godoc.org/golift.io/cnfg) for several working examples and
+further explanation of how maps and slices can be accessed with shell env vars.
 
-Supports almost every possible type, including slices, maps, slices of maps,
-maps of slices, pointers of slices to maps of slices!
+Supports all base types, including slices, maps, slices of maps, maps of slices,
+pointers of slices to maps of slices full of ints, strings, floats and the like!
 
 Please open an issue if you run into a bug or an unsupported type.
+
+Better documentation is needed. Most of it is in [GoDoc](https://godoc.org/golift.io/cnfg).
+This package is **full featured** for environment variable parsing!
 
 ```
 type Shelter struct {

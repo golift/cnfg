@@ -82,6 +82,9 @@ func TestUnmarshalFileErrors(t *testing.T) {
 
 	err = UnmarshalFile(c, "no file here")
 	a.NotNil(err, "there should be an error parsing a missing file")
+
+	err = UnmarshalFile(c)
+	a.NotNil(err, "there should be an error parsing a nil file")
 }
 
 func TestUnmarshalFileJSON(t *testing.T) {

@@ -75,3 +75,17 @@ func TestParseUint(t *testing.T) {
 	a.Nil(err, "must not return an error when only no bytes are provided")
 	a.Equal(uint8(0), f2.F)
 }
+
+// make sure we don't panic when trying to interface something we can't.
+func TestParseInterfaceError(t *testing.T) {
+	t.Parallel()
+
+	a := assert.New(t)
+
+	type F uint64
+
+	ok, err := (&parser{}).Interface(reflect.ValueOf(F(0)), "", "")
+
+	a.Nil(err, "unaddressable value must return nil")
+	a.False(ok, "unaddressable value must return false")
+}
