@@ -1,4 +1,4 @@
-package cnfg
+package cnfgfile
 
 import (
 	"encoding/json"
@@ -11,12 +11,12 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-// UnmarshalFile parses a configuration file (of any format) into a config struct.
+// Unmarshal parses a configuration file (of any format) into a config struct.
 // This is a shorthand method for calling Unmarshal against the json, xml, yaml
 // or toml packages. If the file name contains an appropriate suffix it is
 // unmarshaled with the corresponding package. If the suffix is missing, TOML
 // is assumed. Works with multiple files, so you can have stacked configurations.
-func UnmarshalFile(c interface{}, configFile ...string) error {
+func Unmarshal(c interface{}, configFile ...string) error {
 	if len(configFile) < 1 {
 		return fmt.Errorf("must provide at least 1 file to unmarshal")
 	}
