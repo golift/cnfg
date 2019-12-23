@@ -1,3 +1,8 @@
+// Package cnfgfile provides a shorthand procedure to unmarshal any config file(s).
+// You can put your configuration into any file format: XML, YAML, JSON, TOML.
+// You can pass in more than one config file to unmarshal a hierarchy of configs.
+// Works well with parent cnfg package. Call this package or cnfg in either order.
+// The former overrides the latter.
 package cnfgfile
 
 import (
