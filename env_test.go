@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-/* ~95% code coverage. */
+/* >95% code coverage. */
 
 func TestBrokenENV(t *testing.T) {
 	type testBroken struct {

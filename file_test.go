@@ -1,6 +1,8 @@
 package cnfg
 
 import (
+	"fmt"
+	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -119,4 +121,43 @@ func TestUnmarshalFileTOML(t *testing.T) {
 
 	err := UnmarshalFile(c, "tests/config.toml")
 	testUnmarshalFileValues(a, c, err, "TestUnmarshalFileTOML")
+}
+
+// The cnfg.UnmarshalFile() procedure can be used in place of: xml.Unmarshal,
+// json.Unmarshal, yaml.Unmarshal and toml.Unmarshal. This procedure also reads
+// in the provided file, so you don't need to do any of the io work beforehand.
+// Using this procedure in your app allows your consumers to a use a config file
+// format of their choosing. Very cool stuff when you consider _that file_ could
+// just be a config file for a larger project.
+func ExampleUnmarshalFile() {
+	// Recommend adding tags for each type to your struct members. Provide full compatibility.
+	type Config struct {
+		Interval Duration `json:"interval" xml:"interval" toml:"interval" yaml:"interval"`
+		Location string   `json:"location" xml:"location" toml:"location" yaml:"location"`
+		Provided bool     `json:"provided" xml:"provided" toml:"provided" yaml:"provided"`
+	}
+
+	// Create a test file with some test data to unmarshal.
+	// YAML is just an example, you can use any supported format.
+	yaml := []byte("---\ninterval: 5m\nlocation: Earth\nprovided: true")
+	path := "/tmp/path_to_config.yaml"
+
+	err := ioutil.WriteFile(path, yaml, 0644)
+	if err != nil {
+		panic(err)
+	}
+
+	// Start with an empty config. Or set some defaults beforehand.
+	c := &Config{}
+
+	// Simply pass in your config file. If it contains ".yaml" it will be parsed as YAML.
+	// Same for ".xml" and ".json". If the file has none of these extensions it is parsed
+	// as TOML. Meaning if you name your config "config.conf" it needs ot be TOML formatted.
+	err = UnmarshalFile(c, path)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("interval: %v, location: %v, provided: %v", c.Interval, c.Location, c.Provided)
+	// Output: interval: 5m0s, location: Earth, provided: true
 }

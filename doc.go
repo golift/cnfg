@@ -1,14 +1,19 @@
-// Package cnfg provide basic procedures to parse a config file into a struct,
+// Package cnfg provides procedures to parse a config file into a struct,
 // and more powerfully, parse a slew of environment variables into the same or
 // a different struct. These two procedures can be used one after the other in
 // either order (the latter overrides parts of the former).
 //
-// If this package interests you, pull requests and feature requests are welcomed!
+// Use this package if your app uses a config file and you want to allow users to change
+// or override the configurations in that file with environment variables. You can also
+// use this app just to parse environment variables; handling a config file is entirely
+// optional. Every member type is supported. If I missed one, please open an issue.
+// If you need a non-base type supported (net.IP works already) please open an issue.
+// New types are extremely easy to add. If this package interests you, pull requests
+// and feature requests are welcomed!
 //
-// I consider this package the pinacle example of how to configure small Go applications from a file.
+// I consider this package the pinnacle example of how to configure Go applications from a file.
 // You can put your configuration into any file format: XML, YAML, JSON, TOML, and you can override
-// any struct member using an environment variable. As it is now, the (env) code lacks map{} support
-// but pretty much any other base type and nested member is supported. Adding more/the rest will
-// happen in time. I created this package because I got tired of writing custom env parser code for
-// every app I make. This simplifies all the heavy lifting and I don't even have to think about it now.
+// any struct member using an environment variable. I created this package because I got tired of
+// writing custom env parser code for every app I make. This simplifies all the heavy lifting and I
+// don't even have to think about it now. I hope you enjoy using this simplification as much as I do!
 package cnfg
