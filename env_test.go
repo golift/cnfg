@@ -1,6 +1,7 @@
 package cnfg
 
 import (
+	"fmt"
 	"net"
 	"net/url"
 	"os"
@@ -14,18 +15,18 @@ import (
 
 func TestBrokenENV(t *testing.T) {
 	type testBroken struct {
-		Broke []error `xml:"broke"`
+		Broke []interface{} `xml:"broke"`
 	}
 
 	type testBroken2 struct {
-		Broke map[error]string `xml:"broke"`
+		Broke map[interface{}]string `xml:"broke"`
 	}
 
 	type testBroken3 struct {
-		Broke map[string]error `xml:"broke"`
+		Broke map[string]interface{} `xml:"broke"`
 	}
 
-	os.Setenv("TEST_BROKE_0", "foo")
+	os.Setenv("TEST_BROKE_0", "f00")
 	os.Setenv("TEST_BROKE_broke", "foo")
 
 	a := assert.New(t)
@@ -55,6 +56,7 @@ func TestUnmarshalENVerrors(t *testing.T) {
 		unexpd map[string]string
 		Works  map[string]string `xml:"works"`
 		Rad    map[string][]int  `xml:"yup"`
+		Error  error             `xml:"error"`
 	}
 
 	os.Setenv("YO_WORKS_foostring", "fooval")
@@ -63,6 +65,7 @@ func TestUnmarshalENVerrors(t *testing.T) {
 	os.Setenv("YO_YUP_server99_1", "129")
 	os.Setenv("YO_YUP_server99_2", "130")
 	os.Setenv("YO_YUP_server100_0", "256")
+	os.Setenv("YO_ERROR", "this is an error")
 
 	c := tester{}
 	ok, err := UnmarshalENV(&c, "YO")
@@ -74,6 +77,7 @@ func TestUnmarshalENVerrors(t *testing.T) {
 	a.Equal("foo2val", c.Works["foo2string"])
 	a.Equal([]int{128, 129, 130}, c.Rad["server99"])
 	a.Equal([]int{256}, c.Rad["server100"])
+	a.Equal(fmt.Errorf("this is an error"), c.Error)
 
 	type tester2 struct {
 		NotBroken  []map[string]string  `xml:"broken"`

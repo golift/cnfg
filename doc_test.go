@@ -46,8 +46,11 @@ func ExampleENV_Unmarshal_simple() {
 	fmt.Printf("BEFORE => Debug: %v, Interval: %v, Users: %v, Systems: %v\n",
 		c.Debug, c.Interval, c.Users, c.Systems)
 
+	// Make a ENV Decoder with special tag and prefix.
+	env := &ENV{Tag: "env", Pfx: "APP"}
+
 	// Run Unmarshal to parse the values into your config pointer:
-	ok, err := (&ENV{Tag: "env", Pfx: "APP"}).Unmarshal(c)
+	ok, err := env.Unmarshal(c)
 	if err != nil {
 		panic(err)
 	}

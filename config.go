@@ -27,7 +27,7 @@ type ENV struct {
 	Pfx string // ENV var prefix.
 }
 
-type parse struct {
+type parser struct {
 	Tag  string // struct tag to look for on struct values
 	Vals Pairs  // pairs of env variables (saved at start)
 }
@@ -48,6 +48,7 @@ const (
 	typeFloat64 = "float64"
 	typeFloat32 = "float32"
 	typeBool    = "bool"
+	typeError   = "error"
 	typeDur     = "time.Duration"
 )
 

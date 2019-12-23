@@ -26,7 +26,7 @@ func (e *ENV) Unmarshal(i interface{}) (bool, error) {
 	}
 
 	// Save the current environment.
-	parse := &parse{Tag: e.Tag, Vals: MapEnvPairs(e.Pfx, os.Environ())}
+	parse := &parser{Tag: e.Tag, Vals: MapEnvPairs(e.Pfx, os.Environ())}
 
 	return parse.Struct(value, e.Pfx)
 }

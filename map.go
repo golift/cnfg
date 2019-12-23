@@ -45,7 +45,7 @@ func (e *ENV) UnmarshalMap(pairs map[string]string, i interface{}) (bool, error)
 		e.Tag = ENVTag
 	}
 
-	return (&parse{Tag: e.Tag, Vals: pairs}).Struct(value, e.Pfx)
+	return (&parser{Tag: e.Tag, Vals: pairs}).Struct(value, e.Pfx)
 }
 
 // MapEnvPairs turns the pairs returned by os.Environ() into a map[string]string.

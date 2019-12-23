@@ -15,7 +15,7 @@ type TimeX struct {
 // This is a test to make sure our struct satisfies the interface.
 var _ ENVUnmarshaler = (*TimeX)(nil)
 
-type Config struct {
+type AppConfig struct {
 	Name    string `xml:"name"`
 	Special TimeX  `xml:"in"`
 }
@@ -46,7 +46,7 @@ func (t *TimeX) UnmarshalENV(tag, val string) error {
 // This simple example shows how you may use the ENVUnmarshaler interface.
 // This shows how to use two environment variables to set one custom value.
 func ExampleENVUnmarshaler() {
-	c := &Config{}
+	c := &AppConfig{}
 
 	os.Setenv("APP_IN", "5m")
 	os.Setenv("APP_IN_X", "10")

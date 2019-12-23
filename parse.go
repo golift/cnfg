@@ -14,7 +14,7 @@ import (
 
 // Struct does most of the heavy lifting. Called every time a struct is encountered.
 // The entire process begins here. It's very recursive.
-func (p *parse) Struct(field reflect.Value, prefix string) (bool, error) {
+func (p *parser) Struct(field reflect.Value, prefix string) (bool, error) {
 	var exitOk bool
 
 	t := field.Type().Elem()
@@ -40,7 +40,7 @@ func (p *parse) Struct(field reflect.Value, prefix string) (bool, error) {
 	return exitOk, nil
 }
 
-func (p *parse) Anything(field reflect.Value, tag, envval string, force bool) (bool, error) {
+func (p *parser) Anything(field reflect.Value, tag, envval string, force bool) (bool, error) {
 	//	log.Println("Anything", envval, tag, field.Kind(), field.Type(), field.Interface())
 	if exists, err := p.Interface(field, tag, envval); err != nil {
 		return false, err
@@ -66,7 +66,7 @@ func (p *parse) Anything(field reflect.Value, tag, envval string, force bool) (b
 	}
 }
 
-func (p *parse) Pointer(field reflect.Value, tag, envval string) (ok bool, err error) {
+func (p *parser) Pointer(field reflect.Value, tag, envval string) (ok bool, err error) {
 	value := reflect.New(field.Type().Elem())
 	if field.Elem().CanAddr() {
 		// if the pointer already has a value, copy it instead of use the new one.
@@ -83,7 +83,7 @@ func (p *parse) Pointer(field reflect.Value, tag, envval string) (ok bool, err e
 	return ok, err
 }
 
-func (p *parse) Interface(field reflect.Value, tag, envval string) (bool, error) {
+func (p *parser) Interface(field reflect.Value, tag, envval string) (bool, error) {
 	if !field.CanAddr() || !field.Addr().CanInterface() {
 		return false, nil
 	}
@@ -115,7 +115,7 @@ func (p *parse) Interface(field reflect.Value, tag, envval string) (bool, error)
 }
 
 // Member parses non-struct, non-slice struct-member types.
-func (p *parse) Member(field reflect.Value, tag, envval string) (bool, error) {
+func (p *parser) Member(field reflect.Value, tag, envval string) (bool, error) {
 	var err error
 
 	switch fieldType := field.Type().String(); fieldType {
@@ -124,10 +124,7 @@ func (p *parse) Member(field reflect.Value, tag, envval string) (bool, error) {
 		// SetString is a reflect package method to update a struct member by index.
 		field.SetString(envval)
 	case typeUINT, typeUINT8, typeUINT16, typeUINT32, typeUINT64:
-		var val uint64
-
-		val, err = parseUint(fieldType, envval)
-		field.SetUint(val)
+		err = parseUint(field, fieldType, envval)
 	case typeINT, typeINT8, typeINT16, typeINT32, typeINT64:
 		var val int64
 
@@ -153,12 +150,14 @@ func (p *parse) Member(field reflect.Value, tag, envval string) (bool, error) {
 
 		val, err = strconv.ParseBool(envval)
 		field.SetBool(val)
+	case typeError: // lul
+		field.Set(reflect.ValueOf(fmt.Errorf(envval)))
 	default:
 		var ok bool
 
 		if ok, err = p.Interface(field, tag, envval); err == nil && !ok {
 			err = fmt.Errorf("unsupported type: %v (val: %s) - please report this if "+
-				"you think this type should be supported", field.Type(), envval)
+				"this type should be supported", field.Type(), envval)
 		}
 	}
 
@@ -169,12 +168,21 @@ func (p *parse) Member(field reflect.Value, tag, envval string) (bool, error) {
 	return true, nil
 }
 
-func (p *parse) Slice(field reflect.Value, tag string) (bool, error) {
+func (p *parser) Slice(field reflect.Value, tag string) (ok bool, err error) {
 	value := field
 
 	reflect.Copy(value, field)
 
-	ok, err := p.SliceValue(value, tag)
+	// slice of bytes works differently than any other slice type.
+	if value.Type().String() == "[]uint8" {
+		envval, exists := p.Vals[tag]
+		ok = exists
+
+		value.SetBytes([]byte(envval))
+	} else {
+		ok, err = p.SliceValue(value, tag)
+	}
+
 	if ok {
 		field.Set(value) // Overwrite the slice.
 	}
@@ -182,7 +190,7 @@ func (p *parse) Slice(field reflect.Value, tag string) (bool, error) {
 	return ok, err
 }
 
-func (p *parse) SliceValue(field reflect.Value, tag string) (bool, error) {
+func (p *parser) SliceValue(field reflect.Value, tag string) (bool, error) {
 	var ok bool
 
 	total := field.Len()
@@ -221,7 +229,7 @@ func (p *parse) SliceValue(field reflect.Value, tag string) (bool, error) {
 	return ok, nil
 }
 
-func (p *parse) Map(field reflect.Value, tag string) (bool, error) {
+func (p *parser) Map(field reflect.Value, tag string) (bool, error) {
 	var ok bool
 
 	vals := p.Vals.Get(tag)
@@ -266,19 +274,39 @@ func (p *parse) Map(field reflect.Value, tag string) (bool, error) {
 	return ok, nil
 }
 
-func parseUint(intType, envval string) (uint64, error) {
+func parseUint(field reflect.Value, intType, envval string) error {
+	var err error
+
+	var val uint64
+
 	switch intType {
 	default:
-		return strconv.ParseUint(envval, 10, 0)
+		val, err = strconv.ParseUint(envval, 10, 0)
 	case typeUINT8:
-		return strconv.ParseUint(envval, 10, 8)
+		// this crap is to support byte and []byte
+		switch len(envval) {
+		case 0:
+			field.Set(reflect.ValueOf(uint8(0)))
+			return nil
+		case 1:
+			field.Set(reflect.ValueOf(envval[0]))
+			return nil
+		default:
+			return fmt.Errorf("invalid byte: %s", envval)
+		}
 	case typeUINT16:
-		return strconv.ParseUint(envval, 10, 16)
+		val, err = strconv.ParseUint(envval, 10, 16)
 	case typeUINT32:
-		return strconv.ParseUint(envval, 10, 32)
+		val, err = strconv.ParseUint(envval, 10, 32)
 	case typeUINT64:
-		return strconv.ParseUint(envval, 10, 64)
+		val, err = strconv.ParseUint(envval, 10, 64)
 	}
+
+	if err == nil {
+		field.SetUint(val)
+	}
+
+	return err
 }
 
 func parseInt(intType, envval string) (int64, error) {
