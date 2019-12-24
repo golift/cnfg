@@ -1,7 +1,5 @@
-// Package cnfg provides procedures to parse a config file into a struct,
-// and more powerfully, parse a slew of environment variables into the same or
-// a different struct. These two procedures can be used one after the other in
-// either order (the latter overrides parts of the former).
+// Package cnfg provides procedures to parse parse a slew of environment variables
+// into a struct pointer.
 //
 // Use this package if your app uses a config file and you want to allow users to change
 // or override the configurations in that file with environment variables. You can also
