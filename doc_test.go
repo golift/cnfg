@@ -137,6 +137,7 @@ func ExampleUnmarshalENV() {
 	}
 
 	fmt.Printf("AFTER  => Users: %v\n", c.Users)
+
 	for i, s := range c.Systems {
 		fmt.Printf(" %v: System Name: %v, Signals: %v, Ion: %v\n", i, s.Name, s.Signal, s.Ion)
 	}
