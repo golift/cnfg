@@ -12,7 +12,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	toml "github.com/pelletier/go-toml"
+	toml "github.com/BurntSushi/toml"
 	yaml "gopkg.in/yaml.v2"
 )
 
