@@ -20,16 +20,19 @@ func (p *parser) Struct(field reflect.Value, prefix string) (bool, error) {
 	t := field.Type().Elem()
 	for i := 0; i < t.NumField(); i++ { // Loop each struct member
 		shorttag := strings.Split(strings.ToUpper(t.Field(i).Tag.Get(p.Tag)), ",")[0]
-		if !field.Elem().Field(i).CanSet() || shorttag == "-" || shorttag == "" {
+		if !field.Elem().Field(i).CanSet() || shorttag == "-" {
 			continue // This _only_ works with reflection tags.
 		}
 
 		tag := strings.Join([]string{prefix, shorttag}, "_")
 		if prefix == "" {
 			tag = shorttag
+		} else if shorttag == "" {
+			tag = prefix
 		}
 
 		envval, ok := p.Vals[tag]
+		//		log.Print("tag ", tag, " = ", envval)
 		if exists, err := p.Anything(field.Elem().Field(i), tag, envval, ok); err != nil {
 			return false, err
 		} else if exists {
