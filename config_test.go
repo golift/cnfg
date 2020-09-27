@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // TimeX uses two environment variables to multiply a duration.
@@ -59,4 +62,24 @@ func ExampleENVUnmarshaler() {
 
 	fmt.Printf("%s starts in %v", c.Name, c.Special)
 	// Output: myApp starts in 50m0s
+}
+
+func TestUnmarshalText(t *testing.T) {
+	t.Parallel()
+
+	d := Duration{Duration: time.Minute + time.Second}
+	b, err := d.MarshalText()
+
+	assert.Nil(t, err, "this method must not return an error")
+	assert.Equal(t, []byte("1m1s"), b)
+}
+
+func TestUnmarshalJSON(t *testing.T) {
+	t.Parallel()
+
+	d := Duration{Duration: time.Minute + time.Hour}
+	b, err := d.MarshalJSON()
+
+	assert.Nil(t, err, "this method must not return an error")
+	assert.Equal(t, []byte(`"1h1m0s"`), b)
 }

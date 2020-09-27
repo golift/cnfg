@@ -2,6 +2,7 @@ package cnfg
 
 import (
 	"encoding"
+	"encoding/json"
 	"time"
 )
 
@@ -66,5 +67,19 @@ func (d *Duration) UnmarshalText(b []byte) (err error) {
 	return
 }
 
+// MarshalText returns the string representation of a Duration. ie. 1m32s
+func (d *Duration) MarshalText() ([]byte, error) {
+	return []byte(d.Duration.String()), nil
+}
+
+// MarshalJSON returns the string representation of a Duration for JSON. ie. "1m32s"
+func (d *Duration) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + d.Duration.String() + `"`), nil
+}
+
 // Make sure our struct satisfies the interface it's for.
-var _ encoding.TextUnmarshaler = (*Duration)(nil)
+var (
+	_ encoding.TextUnmarshaler = (*Duration)(nil)
+	_ encoding.TextMarshaler   = (*Duration)(nil)
+	_ json.Marshaler           = (*Duration)(nil)
+)
