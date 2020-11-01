@@ -7,7 +7,7 @@ import (
 )
 
 // Complete working example for ENV.Unmarshal().
-func ExampleENV_Unmarshal_simple() {
+func ExampleENV_Unmarshal_simple() { // nolint: funlen
 	// Systems is used to show an example of how to access nested slices.
 	type System struct {
 		Name   string `env:"name"`
@@ -68,6 +68,7 @@ func ExampleENV_Unmarshal_simple() {
 	// Same for structs and slices.
 	if c.Interval == nil {
 		fmt.Printf("You forgot to set an interval!")
+
 		return
 	}
 
@@ -85,7 +86,7 @@ func ExampleENV_Unmarshal_simple() {
 
 // Complete working example for UnmarshalENV(). Use this method when the "xml"
 // struct tag suits your application.
-func ExampleUnmarshalENV() {
+func ExampleUnmarshalENV() { // nolint: funlen
 	// Systems is used to show an example of how to access nested slices.
 	type System struct {
 		Name   string             `xml:"name"`

@@ -56,7 +56,7 @@ func (p *parser) Anything(field reflect.Value, tag, envval string, force bool) (
 		return true, nil
 	}
 
-	switch field.Kind() {
+	switch field.Kind() { // nolint: exhaustive
 	case reflect.Ptr:
 		return p.Pointer(field, tag, envval)
 	case reflect.Struct:
@@ -99,6 +99,7 @@ func (p *parser) Interface(field reflect.Value, tag, envval string) (bool, error
 	if v, ok := field.Addr().Interface().(ENVUnmarshaler); ok {
 		// Custom unmarshaler can proceed even if envval is empty. It may produce new envvals...
 		err := v.UnmarshalENV(tag, envval)
+
 		return err == nil, err
 	}
 
@@ -108,6 +109,7 @@ func (p *parser) Interface(field reflect.Value, tag, envval string) (bool, error
 
 	if v, ok := field.Addr().Interface().(encoding.TextUnmarshaler); ok {
 		err := v.UnmarshalText([]byte(envval))
+
 		return err == nil, err
 	}
 
@@ -116,6 +118,7 @@ func (p *parser) Interface(field reflect.Value, tag, envval string) (bool, error
 	// _after_ TextUnmarshaler fixed the time.Time bug, so it's "ok"
 	if v, ok := field.Addr().Interface().(encoding.BinaryUnmarshaler); ok {
 		err := v.UnmarshalBinary([]byte(envval))
+
 		return err == nil, err
 	}
 
@@ -294,9 +297,11 @@ func parseUint(field reflect.Value, intType, envval string) error {
 		switch len(envval) {
 		case 0:
 			field.Set(reflect.ValueOf(uint8(0)))
+
 			return nil
 		case 1:
 			field.Set(reflect.ValueOf(envval[0]))
+
 			return nil
 		default:
 			return fmt.Errorf("%w: %s", ErrInvalidByte, envval)
@@ -311,6 +316,7 @@ func parseUint(field reflect.Value, intType, envval string) error {
 
 	if err == nil {
 		field.SetUint(val)
+
 		return nil
 	}
 

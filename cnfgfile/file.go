@@ -24,7 +24,7 @@ var ErrNoFile = fmt.Errorf("must provide at least 1 file to unmarshal")
 // unmarshaled with the corresponding package. If the suffix is missing, TOML
 // is assumed. Works with multiple files, so you can have stacked configurations.
 func Unmarshal(c interface{}, configFile ...string) error {
-	if len(configFile) < 1 {
+	if len(configFile) == 0 {
 		return ErrNoFile
 	}
 

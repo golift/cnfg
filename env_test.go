@@ -30,7 +30,7 @@ type testSubConfig struct {
 	FloatP  *float64 `json:"float" xml:"float" yaml:"float" toml:"float"`
 }
 
-// a few tests hit this
+// A few tests hit this.
 func testUnmarshalFileValues(a *assert.Assertions, c *testStruct, err error, from string) {
 	from += " "
 
@@ -139,7 +139,7 @@ func TestUnmarshalENVerrors(t *testing.T) {
 	a.Equal("foo2val", c.Works["foo2string"])
 	a.Equal([]int{128, 129, 130}, c.Rad["server99"])
 	a.Equal([]int{256}, c.Rad["server100"])
-	a.Equal(fmt.Errorf("this is an error"), c.Error)
+	a.Equal(fmt.Errorf("this is an error"), c.Error) // nolint: goerr113
 
 	type tester2 struct {
 		NotBroken  []map[string]string  `xml:"broken"`

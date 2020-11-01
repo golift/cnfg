@@ -25,7 +25,7 @@ func (p *Pairs) Get(prefix string) Pairs {
 // UnmarshalMap parses and processes a map of key/value pairs as though they
 // were environment variables. Useful for testing, or unmarshaling values
 // from places other than environment variables.
-// This version of UnmarshalMap assumes default tag ("xml") and no prefix: ""
+// This version of UnmarshalMap assumes default tag ("xml") and no prefix: "".
 func UnmarshalMap(pairs map[string]string, i interface{}) (bool, error) {
 	return (&ENV{Tag: ENVTag}).UnmarshalMap(pairs, i)
 }
