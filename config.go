@@ -3,6 +3,7 @@ package cnfg
 import (
 	"encoding"
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -33,7 +34,7 @@ type parser struct {
 	Vals Pairs  // pairs of env variables (saved at start)
 }
 
-// satify goconst
+// Satify goconst.
 const (
 	typeINT     = "int"
 	typeINT8    = "int8"
@@ -64,15 +65,20 @@ type Duration struct{ time.Duration }
 // env variables in the same struct. You won't generally call this directly.
 func (d *Duration) UnmarshalText(b []byte) (err error) {
 	d.Duration, err = time.ParseDuration(string(b))
-	return
+
+	if err != nil {
+		return fmt.Errorf("parsing duration '%s': %w", b, err)
+	}
+
+	return nil
 }
 
-// MarshalText returns the string representation of a Duration. ie. 1m32s
+// MarshalText returns the string representation of a Duration. ie. 1m32s.
 func (d *Duration) MarshalText() ([]byte, error) {
 	return []byte(d.Duration.String()), nil
 }
 
-// MarshalJSON returns the string representation of a Duration for JSON. ie. "1m32s"
+// MarshalJSON returns the string representation of a Duration for JSON. ie. "1m32s".
 func (d *Duration) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + d.Duration.String() + `"`), nil
 }

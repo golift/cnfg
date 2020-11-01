@@ -12,6 +12,11 @@ import (
 /* This file contains all the logic to parse a data structure
    using reflection tags from a map of keys and values. */
 
+var (
+	ErrUnsupported = fmt.Errorf("unsupported type, please report this if this type should be supported")
+	ErrInvalidByte = fmt.Errorf("invalid byte")
+)
+
 // Struct does most of the heavy lifting. Called every time a struct is encountered.
 // The entire process begins here. It's very recursive.
 func (p *parser) Struct(field reflect.Value, prefix string) (bool, error) {
@@ -154,18 +159,17 @@ func (p *parser) Member(field reflect.Value, tag, envval string) (bool, error) {
 		val, err = strconv.ParseBool(envval)
 		field.SetBool(val)
 	case typeError: // lul
-		field.Set(reflect.ValueOf(fmt.Errorf(envval)))
+		field.Set(reflect.ValueOf(fmt.Errorf(envval))) // nolint: goerr113
 	default:
 		var ok bool
 
 		if ok, err = p.Interface(field, tag, envval); err == nil && !ok {
-			err = fmt.Errorf("unsupported type: %v (val: %s) - please report this if "+
-				"this type should be supported", field.Type(), envval)
+			err = fmt.Errorf("%w: %v (val: %s)", ErrUnsupported, field.Type(), envval)
 		}
 	}
 
 	if err != nil {
-		return false, fmt.Errorf("%s: %v", tag, err)
+		return false, fmt.Errorf("%s: %w", tag, err)
 	}
 
 	return true, nil
@@ -295,7 +299,7 @@ func parseUint(field reflect.Value, intType, envval string) error {
 			field.Set(reflect.ValueOf(envval[0]))
 			return nil
 		default:
-			return fmt.Errorf("invalid byte: %s", envval)
+			return fmt.Errorf("%w: %s", ErrInvalidByte, envval)
 		}
 	case typeUINT16:
 		val, err = strconv.ParseUint(envval, 10, 16)
@@ -307,9 +311,10 @@ func parseUint(field reflect.Value, intType, envval string) error {
 
 	if err == nil {
 		field.SetUint(val)
+		return nil
 	}
 
-	return err
+	return fmt.Errorf("integer parse error: %w", err)
 }
 
 func parseInt(intType, envval string) (int64, error) {

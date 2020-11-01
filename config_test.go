@@ -33,12 +33,12 @@ func (t *TimeX) UnmarshalENV(tag, val string) error {
 
 	multiplier, err := strconv.Atoi(xString)
 	if err != nil {
-		return fmt.Errorf("multiplier invalid %s: %v", xTag, err)
+		return fmt.Errorf("multiplier invalid %s: %w", xTag, err)
 	}
 
 	t.Duration, err = time.ParseDuration(val)
 	if err != nil {
-		return fmt.Errorf("duration invalid %s: %v", tag, err)
+		return fmt.Errorf("duration invalid %s: %w", tag, err)
 	}
 
 	t.Duration *= time.Duration(multiplier)

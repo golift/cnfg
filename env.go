@@ -6,6 +6,8 @@ import (
 	"reflect"
 )
 
+var ErrInvalidInterface = fmt.Errorf("can only unmarshal ENV into pointer to struct")
+
 // UnmarshalENV copies environment variables into configuration values.
 // This is useful for Docker users that find it easier to pass ENV variables
 // than a specific configuration file. Uses reflection to find struct tags.
@@ -18,7 +20,7 @@ func UnmarshalENV(i interface{}, prefix string) (bool, error) {
 func (e *ENV) Unmarshal(i interface{}) (bool, error) {
 	value := reflect.ValueOf(i)
 	if value.Kind() != reflect.Ptr || value.Elem().Kind() != reflect.Struct {
-		return false, fmt.Errorf("can only unmarshal ENV into pointer to struct")
+		return false, ErrInvalidInterface
 	}
 
 	if e.Tag == "" {

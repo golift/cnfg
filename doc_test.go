@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// Complete working example for ENV.Unmarshal()
+// Complete working example for ENV.Unmarshal().
 func ExampleENV_Unmarshal_simple() {
 	// Systems is used to show an example of how to access nested slices.
 	type System struct {
@@ -26,8 +26,10 @@ func ExampleENV_Unmarshal_simple() {
 	// Make a pointer to your struct with some default data.
 	// Maybe this data came from a config file? Using ParseFile()!
 	c := &Config{
-		Debug: true,
-		Users: []string{"me", "you", "them"},
+		Debug:    true,
+		Users:    []string{"me", "you", "them"},
+		Interval: nil,
+		Systems:  nil,
 	}
 
 	// Okay set some ENV variables. Pretend you did this in bash.

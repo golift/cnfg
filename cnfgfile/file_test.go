@@ -146,7 +146,7 @@ func ExampleUnmarshal() {
 	yaml := []byte("---\ninterval: 5m\nlocation: Earth\nprovided: true")
 	path := "/tmp/path_to_config.yaml"
 
-	err := ioutil.WriteFile(path, yaml, 0644)
+	err := ioutil.WriteFile(path, yaml, 0600)
 	if err != nil {
 		panic(err)
 	}

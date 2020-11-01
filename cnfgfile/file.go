@@ -13,8 +13,10 @@ import (
 	"strings"
 
 	toml "github.com/BurntSushi/toml"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 )
+
+var ErrNoFile = fmt.Errorf("must provide at least 1 file to unmarshal")
 
 // Unmarshal parses a configuration file (of any format) into a config struct.
 // This is a shorthand method for calling Unmarshal against the json, xml, yaml
@@ -23,7 +25,7 @@ import (
 // is assumed. Works with multiple files, so you can have stacked configurations.
 func Unmarshal(c interface{}, configFile ...string) error {
 	if len(configFile) < 1 {
-		return fmt.Errorf("must provide at least 1 file to unmarshal")
+		return ErrNoFile
 	}
 
 	for _, f := range configFile {
@@ -31,7 +33,7 @@ func Unmarshal(c interface{}, configFile ...string) error {
 
 		switch {
 		case err != nil:
-			return err
+			return fmt.Errorf("reading file %s: %w", configFile, err)
 		case strings.Contains(f, ".json"):
 			err = json.Unmarshal(buf, c)
 		case strings.Contains(f, ".xml"):
@@ -43,7 +45,7 @@ func Unmarshal(c interface{}, configFile ...string) error {
 		}
 
 		if err != nil {
-			return err
+			return fmt.Errorf("unmarshaling file %s: %w", configFile, err)
 		}
 	}
 
