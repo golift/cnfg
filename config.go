@@ -74,12 +74,12 @@ func (d *Duration) UnmarshalText(b []byte) (err error) {
 }
 
 // MarshalText returns the string representation of a Duration. ie. 1m32s.
-func (d *Duration) MarshalText() ([]byte, error) {
+func (d Duration) MarshalText() ([]byte, error) {
 	return []byte(d.Duration.String()), nil
 }
 
 // MarshalJSON returns the string representation of a Duration for JSON. ie. "1m32s".
-func (d *Duration) MarshalJSON() ([]byte, error) {
+func (d Duration) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + d.Duration.String() + `"`), nil
 }
 
