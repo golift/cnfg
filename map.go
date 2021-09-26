@@ -6,6 +6,7 @@ import (
 )
 
 // Pairs represents pairs of environment variables.
+// These can be used directly or converted to other usable formats.
 type Pairs map[string]string
 
 const pairSize = 2
@@ -24,10 +25,12 @@ func (p *Pairs) Get(prefix string) Pairs {
 	return m
 }
 
+// Set simply sets a value in a map.
 func (p Pairs) Set(k, v string) {
 	p[k] = v
 }
 
+// Merge merges two Pairs maps.
 func (p Pairs) Merge(pairs Pairs) {
 	for k, v := range pairs {
 		p[k] = v
@@ -74,7 +77,9 @@ func MapEnvPairs(prefix string, pairs []string) Pairs {
 	return m
 }
 
-func (p Pairs) Slice() []string {
+// Env turns the Pairs map into an envionrment variable slice.
+// This slice can be set to exec.Command().Env.
+func (p Pairs) Env() []string {
 	output := make([]string, len(p))
 	i := 0
 
@@ -84,4 +89,15 @@ func (p Pairs) Slice() []string {
 	}
 
 	return output
+}
+
+// Quoted turns the Pairs map into an envionrment variable slice that can be used by bash or other shells.
+func (p Pairs) Quoted() []string {
+	env := p.Env()
+	for i := range env {
+		s := strings.Split(env[i], "=")
+		env[i] = s[0] + `="` + s[1] + `"`
+	}
+
+	return env
 }

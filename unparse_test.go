@@ -111,9 +111,9 @@ func TestDeconStruct(t *testing.T) {
 	a.Equal(count, len(pairs),
 		fmt.Sprintf("%d variables are created in marshalTestData, update as more tests are added.", count))
 
-	for _, v := range pairs.Slice() {
+	for _, v := range pairs.Quoted() {
 		// fmt.Println(v)
 		p := strings.Split(v, "=")
-		a.Equal(pairs[p[0]], p[1], "returned Slice() value is wrong")
+		a.Equal(`"`+pairs[p[0]]+`"`, p[1], "returned Slice() value is wrong")
 	}
 }

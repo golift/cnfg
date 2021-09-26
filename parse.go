@@ -13,11 +13,6 @@ import (
 /* This file contains all the logic to parse a data structure
    using reflection tags from a map of keys and values. */
 
-var (
-	ErrUnsupported = fmt.Errorf("unsupported type, please report this if this type should be supported")
-	ErrInvalidByte = fmt.Errorf("invalid byte")
-)
-
 type parser struct {
 	Tag  string // struct tag to look for on struct members
 	Vals Pairs  // pairs of env variables (saved at start)

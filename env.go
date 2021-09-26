@@ -7,7 +7,12 @@ import (
 	"strings"
 )
 
-var ErrInvalidInterface = fmt.Errorf("can only unmarshal ENV into pointer to struct")
+// Custom errors this package may produce.
+var (
+	ErrUnsupported      = fmt.Errorf("unsupported type, please report this if this type should be supported")
+	ErrInvalidByte      = fmt.Errorf("invalid byte")
+	ErrInvalidInterface = fmt.Errorf("can only unmarshal ENV into pointer to struct")
+)
 
 // UnmarshalENV copies environment variables into configuration values.
 // This is useful for Docker users that find it easier to pass ENV variables
