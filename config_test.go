@@ -1,4 +1,4 @@
-package cnfg
+package cnfg_test
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"golift.io/cnfg"
 )
 
 // TimeX uses two environment variables to multiply a duration.
@@ -16,7 +17,7 @@ type TimeX struct {
 }
 
 // This is a test to make sure our struct satisfies the interface.
-var _ ENVUnmarshaler = (*TimeX)(nil)
+var _ cnfg.ENVUnmarshaler = (*TimeX)(nil)
 
 type AppConfig struct {
 	Name    string `xml:"name"`
@@ -55,7 +56,7 @@ func ExampleENVUnmarshaler() {
 	os.Setenv("APP_IN_X", "10")
 	os.Setenv("APP_NAME", "myApp")
 
-	_, err := UnmarshalENV(c, "APP")
+	_, err := cnfg.UnmarshalENV(c, "APP")
 	if err != nil {
 		panic(err)
 	}
@@ -67,7 +68,7 @@ func ExampleENVUnmarshaler() {
 func TestUnmarshalText(t *testing.T) {
 	t.Parallel()
 
-	d := Duration{Duration: time.Minute + time.Second}
+	d := cnfg.Duration{Duration: time.Minute + time.Second}
 	b, err := d.MarshalText()
 
 	assert.Nil(t, err, "this method must not return an error")
@@ -77,7 +78,7 @@ func TestUnmarshalText(t *testing.T) {
 func TestUnmarshalJSON(t *testing.T) {
 	t.Parallel()
 
-	d := Duration{Duration: time.Minute + time.Hour}
+	d := cnfg.Duration{Duration: time.Minute + time.Hour}
 	b, err := d.MarshalJSON()
 
 	assert.Nil(t, err, "this method must not return an error")

@@ -1,4 +1,4 @@
-package cnfg
+package cnfg_test
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"golift.io/cnfg"
 )
 
 func TestUnmarshalMap(t *testing.T) {
@@ -23,18 +24,18 @@ func TestUnmarshalMap(t *testing.T) {
 	}
 
 	i := mapTester{}
-	ok, err := UnmarshalMap(pairs, &i)
+	ok, err := cnfg.UnmarshalMap(pairs, &i)
 
 	a.Nil(err)
 	a.True(ok)
 	a.EqualValues("bar", i.Foo)
 
-	ok, err = UnmarshalMap(pairs, i)
+	ok, err = cnfg.UnmarshalMap(pairs, i)
 
 	a.False(ok)
 	a.NotNil(err, "must have an error when attempting unmarshal to non-pointer")
 
-	ok, err = (&ENV{}).UnmarshalMap(pairs, &i)
+	ok, err = (&cnfg.ENV{}).UnmarshalMap(pairs, &i)
 	a.True(ok)
 	a.Nil(err)
 }
@@ -59,13 +60,13 @@ func ExampleUnmarshalMap() {
 	// are always upcased, but nested struct member maps are not. They can be any case.
 	// Each nested struct is appended to the parent name(s) with an underscore _.
 	// Slices (except byte slices) are accessed by their position, beginning with 0.
-	pairs := make(Pairs)
+	pairs := make(cnfg.Pairs)
 	pairs["ENVKEY"] = "some env value"
 	pairs["ENVKEY2"] = "some other env value"
 	pairs["NESTED_SUBSLICE_0"] = "first slice value"
 	pairs["NESTED_SUBMAP_mapKey"] = "first map key value"
 
-	ok, err := UnmarshalMap(pairs, i)
+	ok, err := cnfg.UnmarshalMap(pairs, i)
 	if err != nil {
 		panic(err)
 	}
@@ -92,7 +93,7 @@ func ExampleMapEnvPairs() {
 
 	// Create pairs from the current environment.
 	// Only consider environment variables that begin with "TESTAPP"
-	pairs := MapEnvPairs("TESTAPP", os.Environ())
+	pairs := cnfg.MapEnvPairs("TESTAPP", os.Environ())
 	for k, v := range pairs {
 		fmt.Println(k, v)
 	}
@@ -102,7 +103,7 @@ func ExampleMapEnvPairs() {
 	i := &myConfig{}
 
 	// We have to use &ENV{} to set a custom prefix, and change the struct tag.
-	ok, err := (&ENV{Pfx: "TESTAPP", Tag: "env"}).UnmarshalMap(pairs, i)
+	ok, err := (&cnfg.ENV{Pfx: "TESTAPP", Tag: "env"}).UnmarshalMap(pairs, i)
 	if err != nil {
 		panic(err)
 	}

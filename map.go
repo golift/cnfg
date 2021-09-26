@@ -8,6 +8,8 @@ import (
 // Pairs represents pairs of environment variables.
 type Pairs map[string]string
 
+const pairSize = 2
+
 // Get allows getting only specific env variables by prefix.
 // The prefix is trimmed before returning.
 func (p *Pairs) Get(prefix string) Pairs {
@@ -15,11 +17,21 @@ func (p *Pairs) Get(prefix string) Pairs {
 
 	for k, v := range *p {
 		if strings.HasPrefix(k, prefix) {
-			m[strings.Split(strings.TrimPrefix(k, prefix+"_"), "_")[0]] = v
+			m[strings.SplitN(strings.TrimPrefix(k, prefix+LevelSeparator), LevelSeparator, pairSize)[0]] = v
 		}
 	}
 
 	return m
+}
+
+func (p Pairs) Set(k, v string) {
+	p[k] = v
+}
+
+func (p Pairs) Merge(pairs Pairs) {
+	for k, v := range pairs {
+		p[k] = v
+	}
 }
 
 // UnmarshalMap parses and processes a map of key/value pairs as though they
@@ -53,11 +65,23 @@ func MapEnvPairs(prefix string, pairs []string) Pairs {
 	m := make(Pairs)
 
 	for _, pair := range pairs {
-		split := strings.SplitN(pair, "=", 2)
-		if len(split) == 2 && (prefix == "" || strings.HasPrefix(split[0], prefix)) {
+		split := strings.SplitN(pair, "=", pairSize)
+		if len(split) == pairSize && (prefix == "" || strings.HasPrefix(split[0], prefix)) {
 			m[split[0]] = split[1]
 		}
 	}
 
 	return m
+}
+
+func (p Pairs) Slice() []string {
+	output := make([]string, len(p))
+	i := 0
+
+	for k, v := range p {
+		output[i] = k + "=" + v
+		i++
+	}
+
+	return output
 }

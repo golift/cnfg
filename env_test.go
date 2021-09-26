@@ -1,4 +1,4 @@
-package cnfg
+package cnfg_test
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"golift.io/cnfg"
 )
 
 type testStruct struct {
@@ -17,7 +18,7 @@ type testStruct struct {
 	Struct        testSubConfig    `json:"struct" xml:"struct" yaml:"struct" toml:"struct"`
 	PointerStruct *testSubConfig   `json:"pstruct" xml:"pstruct" yaml:"pstruct" toml:"pstruct"`
 	// These dont get targeted during unmarhsal (not in the files).
-	PointerSlice2  []*testSubConfig `json:"pslice2" xml:"pslice2" yaml:"pslice2" toml:"pslice2"`
+	PointerSlice2  []*testSubConfig `json:"pslice2" xml:"pslice2,delenv" yaml:"pslice2" toml:"pslice2"`
 	StructSlice2   []testSubConfig  `json:"sslice2" xml:"sslice2" yaml:"sslice2" toml:"sslice2"`
 	Struct2        testSubConfig    `json:"struct2" xml:"struct2" yaml:"struct2" toml:"struct2"`
 	PointerStruct2 *testSubConfig   `json:"pstruct2" xml:"pstruct2" yaml:"pstruct2" toml:"pstruct2"`
@@ -93,19 +94,19 @@ func TestBrokenENV(t *testing.T) {
 
 	a := assert.New(t)
 	c := &testBroken{}
-	ok, err := UnmarshalENV(c, "TEST")
+	ok, err := cnfg.UnmarshalENV(c, "TEST")
 
 	a.NotNil(err, "an error must be returned for an unsupported type")
 	a.False(ok)
 
 	c2 := &testBroken2{}
-	ok, err = UnmarshalENV(c2, "TEST")
+	ok, err = cnfg.UnmarshalENV(c2, "TEST")
 
 	a.NotNil(err, "an error must be returned for an unsupported map type")
 	a.False(ok)
 
 	c3 := &testBroken3{}
-	ok, err = UnmarshalENV(c3, "TEST")
+	ok, err = cnfg.UnmarshalENV(c3, "TEST")
 
 	a.NotNil(err, "an error must be returned for an unsupported map type")
 	a.False(ok)
@@ -116,7 +117,7 @@ func TestUnmarshalENVerrors(t *testing.T) {
 
 	type tester struct {
 		unexpd map[string]string
-		Works  map[string]string `xml:"works"`
+		Works  map[string]string `xml:"works,delenv"`
 		Rad    map[string][]int  `xml:"yup"`
 		Error  error             `xml:"error"`
 	}
@@ -130,9 +131,11 @@ func TestUnmarshalENVerrors(t *testing.T) {
 	os.Setenv("YO_ERROR", "this is an error")
 
 	c := tester{}
-	ok, err := UnmarshalENV(&c, "YO")
+	ok, err := cnfg.UnmarshalENV(&c, "YO")
 
 	a.Nil(err, "maps are supported and must not produce an error")
+	a.Empty(os.Getenv("YO_WORKS_foo2string"), "delenv must delete the environment variable")
+	a.Empty(os.Getenv("YO_WORKS_foostring"), "delenv must delete the environment variable")
 	a.True(ok)
 	a.Nil(c.unexpd)
 	a.Equal("fooval", c.Works["foostring"])
@@ -156,7 +159,7 @@ func TestUnmarshalENVerrors(t *testing.T) {
 	os.Setenv("MORE_STUFF_0_a", "")
 
 	c2 := tester2{HasStuff: []map[string]string{{"freesoda": "at-pops"}, {"a": "v"}}}
-	ok, err = UnmarshalENV(&c2, "MORE")
+	ok, err = cnfg.UnmarshalENV(&c2, "MORE")
 
 	a.Nil(err, "map slices are supported and must not produce an error")
 	a.True(ok)
@@ -176,7 +179,7 @@ func TestUnmarshalENV(t *testing.T) {
 
 	a := assert.New(t)
 	c := &testStruct{}
-	ok, err := UnmarshalENV(c, "PRE")
+	ok, err := cnfg.UnmarshalENV(c, "PRE")
 
 	a.Nil(err, "there must not be an error when parsing no variables")
 	a.False(ok, "there are no environment variables set, so ok should be false")
@@ -186,7 +189,7 @@ func TestUnmarshalENV(t *testing.T) {
 
 	f := true
 	g := &f
-	_, err = UnmarshalENV(g, "OOO")
+	_, err = cnfg.UnmarshalENV(g, "OOO")
 	a.NotNil(err, "unmarshaling a non-struct pointer must produce an error")
 }
 
@@ -203,11 +206,11 @@ func testThingENV(a *assert.Assertions) {
 
 	c := &testStruct{}
 
-	ok, err := UnmarshalENV(c, "PRE")
+	ok, err := cnfg.UnmarshalENV(c, "PRE")
 	a.True(ok, "ok must be true since things must be parsed")
 	testUnmarshalFileValues(a, c, err, "testThingENV")
 	// do it again, and we should get the same result
-	ok, err = UnmarshalENV(c, "PRE")
+	ok, err = cnfg.UnmarshalENV(c, "PRE")
 	a.True(ok, "ok must be true since things must be parsed")
 	testUnmarshalFileValues(a, c, err, "testThingENV")
 }
@@ -232,7 +235,7 @@ func testOscureENV(a *assert.Assertions) {
 
 	c := &testObscure{}
 	testit := func() {
-		ok, err := UnmarshalENV(c, "OB")
+		ok, err := cnfg.UnmarshalENV(c, "OB")
 		a.True(ok, "ok must be true since things must be parsed")
 		a.Nil(err)
 
@@ -263,7 +266,7 @@ func testOscureENV(a *assert.Assertions) {
 func testSpecialENV(a *assert.Assertions) {
 	type testSpecial struct {
 		Dur  time.Duration    `xml:"dur"`
-		CDur Duration         `xml:"cdur"`
+		CDur cnfg.Duration    `xml:"cdur"`
 		Time time.Time        `xml:"time"`
 		Durs *[]time.Duration `xml:"durs"`
 		Sub  *struct {
@@ -280,7 +283,7 @@ func testSpecialENV(a *assert.Assertions) {
 	os.Setenv("TEST_SUB_IP", "123.45.67.89")
 
 	c := &testSpecial{}
-	ok, err := (&ENV{Pfx: "TEST"}).Unmarshal(c)
+	ok, err := (&cnfg.ENV{Pfx: "TEST"}).Unmarshal(c)
 
 	a.True(ok, "ok must be true since things must be parsed")
 	a.Nil(err)
@@ -293,7 +296,7 @@ func testSpecialENV(a *assert.Assertions) {
 	os.Setenv("TEST_TIME", "not a real time")
 
 	c = &testSpecial{}
-	ok, err = (&ENV{Pfx: "TEST"}).Unmarshal(c)
+	ok, err = (&cnfg.ENV{Pfx: "TEST"}).Unmarshal(c)
 
 	a.False(ok, "cannot parse an invalid time")
 	a.NotNil(err, "cannot parse an invalid time")
