@@ -6,7 +6,10 @@ import (
 )
 
 // Pairs represents pairs of environment variables.
+// These can be used directly or converted to other usable formats.
 type Pairs map[string]string
+
+const pairSize = 2
 
 // Get allows getting only specific env variables by prefix.
 // The prefix is trimmed before returning.
@@ -15,11 +18,23 @@ func (p *Pairs) Get(prefix string) Pairs {
 
 	for k, v := range *p {
 		if strings.HasPrefix(k, prefix) {
-			m[strings.Split(strings.TrimPrefix(k, prefix+"_"), "_")[0]] = v
+			m[strings.SplitN(strings.TrimPrefix(k, prefix+LevelSeparator), LevelSeparator, pairSize)[0]] = v
 		}
 	}
 
 	return m
+}
+
+// Set simply sets a value in a map.
+func (p Pairs) Set(k, v string) {
+	p[k] = v
+}
+
+// Merge merges two Pairs maps.
+func (p Pairs) Merge(pairs Pairs) {
+	for k, v := range pairs {
+		p[k] = v
+	}
 }
 
 // UnmarshalMap parses and processes a map of key/value pairs as though they
@@ -53,11 +68,36 @@ func MapEnvPairs(prefix string, pairs []string) Pairs {
 	m := make(Pairs)
 
 	for _, pair := range pairs {
-		split := strings.SplitN(pair, "=", 2)
-		if len(split) == 2 && (prefix == "" || strings.HasPrefix(split[0], prefix)) {
+		split := strings.SplitN(pair, "=", pairSize)
+		if len(split) == pairSize && (prefix == "" || strings.HasPrefix(split[0], prefix)) {
 			m[split[0]] = split[1]
 		}
 	}
 
 	return m
+}
+
+// Env turns the Pairs map into an envionrment variable slice.
+// This slice can be set to exec.Command().Env.
+func (p Pairs) Env() []string {
+	output := make([]string, len(p))
+	i := 0
+
+	for k, v := range p {
+		output[i] = k + "=" + v
+		i++
+	}
+
+	return output
+}
+
+// Quoted turns the Pairs map into an envionrment variable slice that can be used by bash or other shells.
+func (p Pairs) Quoted() []string {
+	env := p.Env()
+	for i := range env {
+		s := strings.Split(env[i], "=")
+		env[i] = s[0] + `="` + s[1] + `"`
+	}
+
+	return env
 }

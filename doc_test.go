@@ -1,9 +1,11 @@
-package cnfg
+package cnfg_test
 
 import (
 	"fmt"
 	"os"
 	"time"
+
+	"golift.io/cnfg"
 )
 
 // Complete working example for ENV.Unmarshal().
@@ -49,7 +51,7 @@ func ExampleENV_Unmarshal_simple() { // nolint: funlen
 		c.Debug, c.Interval, c.Users, c.Systems)
 
 	// Make a ENV Decoder with special tag and prefix.
-	env := &ENV{Tag: "env", Pfx: "APP"}
+	env := &cnfg.ENV{Tag: "env", Pfx: "APP"}
 
 	// Run Unmarshal to parse the values into your config pointer:
 	ok, err := env.Unmarshal(c)
@@ -134,7 +136,7 @@ func ExampleUnmarshalENV() { // nolint: funlen
 
 	// Run Unmarshal to parse the values into your config pointer.
 	// We ignore "ok" here. You may choose to capture and it do something though.
-	_, err := UnmarshalENV(c, "APP")
+	_, err := cnfg.UnmarshalENV(c, "APP")
 	if err != nil {
 		panic(err)
 	}

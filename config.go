@@ -14,10 +14,19 @@ import (
 // another struct tag. Those lines can get long quickly.
 const ENVTag = "xml"
 
+// LevelSeparator is used to separate the names from different struct levels.
+// This is hard coded here and cannot be changed or modified.
+const LevelSeparator = "_"
+
 // ENVUnmarshaler allows custom unmarshaling on a custom type.
 // If your type implements this, it will be called and the logic stops there.
 type ENVUnmarshaler interface {
 	UnmarshalENV(tag, envval string) error
+}
+
+// ENVMarshaler allows marshaling custom types into env variables.
+type ENVMarshaler interface {
+	MarshalENV(tag string) (map[string]string, error)
 }
 
 // ENV allows you to parse environment variables using an object instead
@@ -27,11 +36,6 @@ type ENVUnmarshaler interface {
 type ENV struct {
 	Tag string // Struct tag name.
 	Pfx string // ENV var prefix.
-}
-
-type parser struct {
-	Tag  string // struct tag to look for on struct values
-	Vals Pairs  // pairs of env variables (saved at start)
 }
 
 // Satify goconst.
@@ -46,13 +50,20 @@ const (
 	typeUINT16  = "uint16"
 	typeUINT32  = "uint32"
 	typeUINT64  = "uint64"
-	typeSTR     = "string"
+	typeString  = "string"
 	typeFloat64 = "float64"
 	typeFloat32 = "float32"
 	typeBool    = "bool"
 	typeError   = "error"
 	typeDur     = "time.Duration"
+	base10      = 10
+	bits8       = 8
+	bits16      = 16
+	bits32      = 32
+	bits64      = 64
 )
+
+// The following is only used in tests, and perhaps externally.
 
 // Duration is useful if you need to load a time Duration from a config file into
 // your application. Use the config.Duration type to support automatic unmarshal
