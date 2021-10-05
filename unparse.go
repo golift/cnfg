@@ -161,6 +161,7 @@ func (p *unparser) Slice(field reflect.Value, tag string, omitempty bool) (Pairs
 	// slice of bytes works differently than any other slice type.
 	if field.Type().String() == "[]uint8" {
 		output.Set(tag, string(field.Bytes()))
+
 		return output, nil
 	}
 

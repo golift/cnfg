@@ -1,4 +1,4 @@
-package cnfgfile
+package cnfgfile_test
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"golift.io/cnfg"
+	"golift.io/cnfg/cnfgfile"
 )
 
 type testStruct struct {
@@ -78,13 +79,13 @@ func TestUnmarshalErrors(t *testing.T) {
 	a := assert.New(t)
 	c := &testStruct{}
 
-	err := Unmarshal(c, "/etc/passwd")
+	err := cnfgfile.Unmarshal(c, "/etc/passwd")
 	a.NotNil(err, "there should be an error parsing a password file")
 
-	err = Unmarshal(c, "no file here")
+	err = cnfgfile.Unmarshal(c, "no file here")
 	a.NotNil(err, "there should be an error parsing a missing file")
 
-	err = Unmarshal(c)
+	err = cnfgfile.Unmarshal(c)
 	a.NotNil(err, "there should be an error parsing a nil file")
 }
 
@@ -93,7 +94,7 @@ func TestUnmarshalJSON(t *testing.T) {
 
 	a := assert.New(t)
 	c := &testStruct{}
-	err := Unmarshal(c, "tests/config.json")
+	err := cnfgfile.Unmarshal(c, "tests/config.json")
 	testUnmarshalValues(a, c, err, "TestUnmarshalJSON")
 }
 
@@ -103,7 +104,7 @@ func TestUnmarshalXML(t *testing.T) {
 	a := assert.New(t)
 	c := &testStruct{}
 
-	err := Unmarshal(c, "tests/config.xml")
+	err := cnfgfile.Unmarshal(c, "tests/config.xml")
 	testUnmarshalValues(a, c, err, "TestUnmarshalXML")
 }
 
@@ -113,7 +114,7 @@ func TestUnmarshalYAML(t *testing.T) {
 	a := assert.New(t)
 	c := &testStruct{}
 
-	err := Unmarshal(c, "tests/config.yaml")
+	err := cnfgfile.Unmarshal(c, "tests/config.yaml")
 	testUnmarshalValues(a, c, err, "TestUnmarshalYAML")
 }
 
@@ -123,7 +124,7 @@ func TestUnmarshalTOML(t *testing.T) {
 	a := assert.New(t)
 	c := &testStruct{}
 
-	err := Unmarshal(c, "tests/config.toml")
+	err := cnfgfile.Unmarshal(c, "tests/config.toml")
 	testUnmarshalValues(a, c, err, "TestUnmarshalTOML")
 }
 
@@ -146,7 +147,7 @@ func ExampleUnmarshal() {
 	yaml := []byte("---\ninterval: 5m\nlocation: Earth\nprovided: true")
 	path := "/tmp/path_to_config.yaml"
 
-	err := ioutil.WriteFile(path, yaml, 0600)
+	err := ioutil.WriteFile(path, yaml, 0o600)
 	if err != nil {
 		panic(err)
 	}
@@ -157,7 +158,7 @@ func ExampleUnmarshal() {
 	// Simply pass in your config file. If it contains ".yaml" it will be parsed as YAML.
 	// Same for ".xml" and ".json". If the file has none of these extensions it is parsed
 	// as TOML. Meaning if you name your config "config.conf" it needs ot be TOML formatted.
-	err = Unmarshal(c, path)
+	err = cnfgfile.Unmarshal(c, path)
 	if err != nil {
 		panic(err)
 	}

@@ -55,6 +55,7 @@ func (p *parser) Struct(field reflect.Value, prefix string) (bool, error) {
 	return exitOk, nil
 }
 
+//nolint:cyclop
 func (p *parser) Anything(field reflect.Value, tag, envval string, force, delenv bool) (bool, error) {
 	//	log.Println("Anything", envval, tag, field.Kind(), field.Type(), field.Interface())
 	if exists, err := p.Interface(field, tag, envval); err != nil {
