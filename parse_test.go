@@ -21,11 +21,11 @@ func TestParseInt(t *testing.T) {
 	}
 }
 
-func TestParseByteSlice(t *testing.T) {
+func TestParseByteSlice(t *testing.T) { //nolint:paralleltest
 	a := assert.New(t)
 
 	type test struct {
-		F []byte `xml:"bytes,delenv"`
+		F []byte `xml:"bytes,delenv"` //nolint:staticcheck
 	}
 
 	os.Setenv("D_BYTES", "byte slice incoming")

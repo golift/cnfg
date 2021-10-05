@@ -12,6 +12,7 @@ import (
 	"golift.io/cnfg"
 )
 
+//nolint:staticcheck
 type testStruct struct {
 	PointerSlice  []*testSubConfig `json:"pslice" xml:"pslice" yaml:"pslice" toml:"pslice"`
 	StructSlice   []testSubConfig  `json:"sslice" xml:"sslice" yaml:"sslice" toml:"sslice"`
@@ -76,7 +77,7 @@ func testUnmarshalFileValues(a *assert.Assertions, c *testStruct, err error, fro
 	a.Nil(c.PointerStruct2, from+"pointer struct 2 must be nil")
 }
 
-func TestBrokenENV(t *testing.T) {
+func TestBrokenENV(t *testing.T) { //nolint:paralleltest
 	type testBroken struct {
 		Broke []interface{} `xml:"broke"`
 	}
@@ -112,12 +113,12 @@ func TestBrokenENV(t *testing.T) {
 	a.False(ok)
 }
 
-func TestUnmarshalENVerrors(t *testing.T) {
+func TestUnmarshalENVerrors(t *testing.T) { //nolint:paralleltest
 	a := assert.New(t)
 
 	type tester struct {
 		unexpd map[string]string
-		Works  map[string]string `xml:"works,delenv"`
+		Works  map[string]string `xml:"works,delenv"` //nolint:staticcheck
 		Rad    map[string][]int  `xml:"yup"`
 		Error  error             `xml:"error"`
 	}
