@@ -148,37 +148,37 @@ func (p *parser) Member(field reflect.Value, tag, envval string) (bool, error) {
 
 	switch fieldType := field.Type().String(); fieldType {
 	// Handle each member type appropriately (differently).
-	case TypeSTR:
+	case typeString:
 		// SetString is a reflect package method to update a struct member by index.
 		field.SetString(envval)
-	case TypeUINT, TypeUINT8, TypeUINT16, TypeUINT32, TypeUINT64:
-		err = ParseUint(field, fieldType, envval)
-	case TypeINT, TypeINT8, TypeINT16, TypeINT32, TypeINT64:
+	case typeUINT, typeUINT8, typeUINT16, typeUINT32, typeUINT64:
+		err = parseUint(field, fieldType, envval)
+	case typeINT, typeINT8, typeINT16, typeINT32, typeINT64:
 		var val int64
 
-		val, err = ParseInt(fieldType, envval)
+		val, err = parseInt(fieldType, envval)
 		field.SetInt(val)
-	case TypeFloat64:
+	case typeFloat64:
 		var val float64
 
 		val, err = strconv.ParseFloat(envval, bits64)
 		field.SetFloat(val)
-	case TypeFloat32:
+	case typeFloat32:
 		var val float64
 
 		val, err = strconv.ParseFloat(envval, bits32)
 		field.SetFloat(val)
-	case TypeDur:
+	case typeDur:
 		var val time.Duration
 
 		val, err = time.ParseDuration(envval)
 		field.Set(reflect.ValueOf(val))
-	case TypeBool:
+	case typeBool:
 		var val bool
 
 		val, err = strconv.ParseBool(envval)
 		field.SetBool(val)
-	case TypeError: // lul
+	case typeError: // lul
 		field.Set(reflect.ValueOf(fmt.Errorf(envval))) // nolint: goerr113
 	default:
 		var ok bool
@@ -313,15 +313,17 @@ func (p *parser) Map(field reflect.Value, tag string, delenv bool) (bool, error)
 	return ok, nil
 }
 
-func ParseUint(field reflect.Value, intType, envval string) error {
-	var err error
-
-	var val uint64
+// parseUint parses an unsigned integer from a string as specific size.
+func parseUint(field reflect.Value, intType, envval string) error {
+	var (
+		err error
+		val uint64
+	)
 
 	switch intType {
 	default:
 		val, err = strconv.ParseUint(envval, base10, 0)
-	case TypeUINT8:
+	case typeUINT8:
 		// this crap is to support byte and []byte
 		switch len(envval) {
 		case 0:
@@ -335,11 +337,11 @@ func ParseUint(field reflect.Value, intType, envval string) error {
 		default:
 			return fmt.Errorf("%w: %s", ErrInvalidByte, envval)
 		}
-	case TypeUINT16:
+	case typeUINT16:
 		val, err = strconv.ParseUint(envval, base10, bits16)
-	case TypeUINT32:
+	case typeUINT32:
 		val, err = strconv.ParseUint(envval, base10, bits32)
-	case TypeUINT64:
+	case typeUINT64:
 		val, err = strconv.ParseUint(envval, base10, bits64)
 	}
 
@@ -352,17 +354,18 @@ func ParseUint(field reflect.Value, intType, envval string) error {
 	return nil
 }
 
-func ParseInt(intType, envval string) (i int64, err error) {
+// parseInt parses an integer from a string as specific size.
+func parseInt(intType, envval string) (i int64, err error) {
 	switch intType {
 	default:
 		i, err = strconv.ParseInt(envval, base10, 0)
-	case TypeINT8:
+	case typeINT8:
 		i, err = strconv.ParseInt(envval, base10, bits8)
-	case TypeINT16:
+	case typeINT16:
 		i, err = strconv.ParseInt(envval, base10, bits16)
-	case TypeINT32:
+	case typeINT32:
 		i, err = strconv.ParseInt(envval, base10, bits32)
-	case TypeINT64:
+	case typeINT64:
 		i, err = strconv.ParseInt(envval, base10, bits64)
 	}
 

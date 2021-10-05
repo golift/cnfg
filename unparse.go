@@ -134,21 +134,21 @@ func (p *unparser) Member(field reflect.Value, tag string, omitempty bool) (Pair
 
 	switch fieldType := field.Type().String(); fieldType {
 	// Handle each member type appropriately (differently).
-	case TypeError:
+	case typeError:
 		output.Set(tag, field.Interface().(error).Error())
-	case TypeSTR:
+	case typeString:
 		output.Set(tag, field.String())
-	case TypeUINT, TypeUINT8, TypeUINT16, TypeUINT32, TypeUINT64:
+	case typeUINT, typeUINT8, typeUINT16, typeUINT32, typeUINT64:
 		output.Set(tag, strconv.FormatUint(field.Uint(), base10))
-	case TypeINT, TypeINT8, TypeINT16, TypeINT32, TypeINT64:
+	case typeINT, typeINT8, typeINT16, typeINT32, typeINT64:
 		output.Set(tag, strconv.FormatInt(field.Int(), base10))
-	case TypeFloat64:
+	case typeFloat64:
 		output.Set(tag, strconv.FormatFloat(field.Float(), 'f', -1, bits64))
-	case TypeFloat32:
+	case typeFloat32:
 		output.Set(tag, strconv.FormatFloat(field.Float(), 'f', -1, bits32))
-	case TypeDur:
+	case typeDur:
 		output.Set(tag, (time.Duration(field.Int()) * time.Nanosecond).String())
-	case TypeBool:
+	case typeBool:
 		output.Set(tag, fmt.Sprintf("%v", field.Bool()))
 	}
 
