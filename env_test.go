@@ -77,7 +77,7 @@ func testUnmarshalFileValues(a *assert.Assertions, c *testStruct, err error, fro
 	a.Nil(c.PointerStruct2, from+"pointer struct 2 must be nil")
 }
 
-func TestBrokenENV(t *testing.T) { //nolint:paralleltest
+func TestBrokenENV(t *testing.T) { //nolint:paralleltest // cannot parallel env vars.
 	type testBroken struct {
 		Broke []interface{} `xml:"broke"`
 	}
@@ -90,8 +90,8 @@ func TestBrokenENV(t *testing.T) { //nolint:paralleltest
 		Broke map[string]interface{} `xml:"broke"`
 	}
 
-	os.Setenv("TEST_BROKE_0", "f00")
-	os.Setenv("TEST_BROKE_broke", "foo")
+	t.Setenv("TEST_BROKE_0", "f00")
+	t.Setenv("TEST_BROKE_broke", "foo")
 
 	a := assert.New(t)
 	c := &testBroken{}
@@ -113,7 +113,7 @@ func TestBrokenENV(t *testing.T) { //nolint:paralleltest
 	a.False(ok)
 }
 
-func TestUnmarshalENVerrors(t *testing.T) { //nolint:paralleltest
+func TestUnmarshalENVerrors(t *testing.T) { //nolint:paralleltest // cannot parallel env vars.
 	a := assert.New(t)
 
 	type tester struct {
@@ -123,13 +123,13 @@ func TestUnmarshalENVerrors(t *testing.T) { //nolint:paralleltest
 		Error  error             `xml:"error"`
 	}
 
-	os.Setenv("YO_WORKS_foostring", "fooval")
-	os.Setenv("YO_WORKS_foo2string", "foo2val")
-	os.Setenv("YO_YUP_server99_0", "128")
-	os.Setenv("YO_YUP_server99_1", "129")
-	os.Setenv("YO_YUP_server99_2", "130")
-	os.Setenv("YO_YUP_server100_0", "256")
-	os.Setenv("YO_ERROR", "this is an error")
+	t.Setenv("YO_WORKS_foostring", "fooval")
+	t.Setenv("YO_WORKS_foo2string", "foo2val")
+	t.Setenv("YO_YUP_server99_0", "128")
+	t.Setenv("YO_YUP_server99_1", "129")
+	t.Setenv("YO_YUP_server99_2", "130")
+	t.Setenv("YO_YUP_server100_0", "256")
+	t.Setenv("YO_ERROR", "this is an error")
 
 	c := tester{}
 	ok, err := cnfg.UnmarshalENV(&c, "YO")
@@ -152,12 +152,12 @@ func TestUnmarshalENVerrors(t *testing.T) { //nolint:paralleltest
 		HasStuff   []map[string]string  `xml:"stuff"`
 	}
 
-	os.Setenv("MORE_BROKEN", "value")
-	os.Setenv("MORE_BROKEN_0_freesauce", "at-charlies")
-	os.Setenv("MORE_BROKEN2_0_freesoup", "at-daves")
-	os.Setenv("MORE_STUFF_0_freesoda", "not-at-pops")
-	os.Setenv("MORE_STUFF_0_freetime", "at-pops")
-	os.Setenv("MORE_STUFF_0_a", "")
+	t.Setenv("MORE_BROKEN", "value")
+	t.Setenv("MORE_BROKEN_0_freesauce", "at-charlies")
+	t.Setenv("MORE_BROKEN2_0_freesoup", "at-daves")
+	t.Setenv("MORE_STUFF_0_freesoda", "not-at-pops")
+	t.Setenv("MORE_STUFF_0_freetime", "at-pops")
+	t.Setenv("MORE_STUFF_0_a", "")
 
 	c2 := tester2{HasStuff: []map[string]string{{"freesoda": "at-pops"}, {"a": "v"}}}
 	ok, err = cnfg.UnmarshalENV(&c2, "MORE")
@@ -174,19 +174,17 @@ func TestUnmarshalENVerrors(t *testing.T) { //nolint:paralleltest
 	a.Nil(c2.NotBroken3, "a nil map without overrides must remain nil")
 }
 
-func TestUnmarshalENV(t *testing.T) {
-	// do not run this in parallel with other tests that change environment variables
-	t.Parallel()
-
+// do not run this in parallel with other tests that change environment variables.
+func TestUnmarshalENV(t *testing.T) { //nolint:paralleltest // cannot parallel env vars.
 	a := assert.New(t)
 	c := &testStruct{}
 	ok, err := cnfg.UnmarshalENV(c, "PRE")
 
 	a.Nil(err, "there must not be an error when parsing no variables")
 	a.False(ok, "there are no environment variables set, so ok should be false")
-	testThingENV(a)
-	testOscureENV(a)
-	testSpecialENV(a)
+	testThingENV(t, a)
+	testOscureENV(t, a)
+	testSpecialENV(t, a)
 
 	f := true
 	g := &f
@@ -194,16 +192,17 @@ func TestUnmarshalENV(t *testing.T) {
 	a.NotNil(err, "unmarshaling a non-struct pointer must produce an error")
 }
 
-func testThingENV(a *assert.Assertions) {
+func testThingENV(t *testing.T, a *assert.Assertions) {
+	t.Helper()
 	os.Clearenv()
-	os.Setenv("PRE_PSLICE_0_BOOL", "true")
-	os.Setenv("PRE_PSLICE_0_FLOAT", "123.4567")
+	t.Setenv("PRE_PSLICE_0_BOOL", "true")
+	t.Setenv("PRE_PSLICE_0_FLOAT", "123.4567")
 
-	os.Setenv("PRE_SSLICE_0_STRING", "foo")
-	os.Setenv("PRE_SSLICE_0_INT", "123")
+	t.Setenv("PRE_SSLICE_0_STRING", "foo")
+	t.Setenv("PRE_SSLICE_0_INT", "123")
 
-	os.Setenv("PRE_STRUCT_BOOL", "false")
-	os.Setenv("PRE_PSTRUCT_STRING", "foo2")
+	t.Setenv("PRE_STRUCT_BOOL", "false")
+	t.Setenv("PRE_PSTRUCT_STRING", "foo2")
 
 	c := &testStruct{}
 
@@ -216,7 +215,9 @@ func testThingENV(a *assert.Assertions) {
 	testUnmarshalFileValues(a, c, err, "testThingENV")
 }
 
-func testOscureENV(a *assert.Assertions) {
+func testOscureENV(t *testing.T, a *assert.Assertions) {
+	t.Helper()
+
 	type testObscure struct {
 		FloatSlice []float32        `xml:"is"`
 		UintSliceP []*uint16        `xml:"uis"`
@@ -225,14 +226,14 @@ func testOscureENV(a *assert.Assertions) {
 	}
 
 	os.Clearenv()
-	os.Setenv("OB_IS_0", "-5")
-	os.Setenv("OB_IS_1", "8")
+	t.Setenv("OB_IS_0", "-5")
+	t.Setenv("OB_IS_1", "8")
 
-	os.Setenv("OB_UIS_0", "12")
-	os.Setenv("OB_UIS_1", "22")
+	t.Setenv("OB_UIS_0", "12")
+	t.Setenv("OB_UIS_1", "22")
 
-	os.Setenv("OB_PSI_0", "-1")
-	os.Setenv("OB_WUT_0_BOOL", "true")
+	t.Setenv("OB_PSI_0", "-1")
+	t.Setenv("OB_WUT_0_BOOL", "true")
 
 	c := &testObscure{}
 	testit := func() {
@@ -264,7 +265,9 @@ func testOscureENV(a *assert.Assertions) {
 	testit() // twice to make sure it's idempotent
 }
 
-func testSpecialENV(a *assert.Assertions) {
+func testSpecialENV(t *testing.T, a *assert.Assertions) {
+	t.Helper()
+
 	type testSpecial struct {
 		Dur  time.Duration    `xml:"dur"`
 		CDur cnfg.Duration    `xml:"cdur"`
@@ -277,11 +280,11 @@ func testSpecialENV(a *assert.Assertions) {
 	}
 
 	os.Clearenv()
-	os.Setenv("TEST_DUR", "1m")
-	os.Setenv("TEST_CDUR", "1s")
-	os.Setenv("TEST_TIME", "2019-12-18T00:35:49+08:00")
-	os.Setenv("TEST_SUB_URL", "https://golift.io/cnfg?rad=true")
-	os.Setenv("TEST_SUB_IP", "123.45.67.89")
+	t.Setenv("TEST_DUR", "1m")
+	t.Setenv("TEST_CDUR", "1s")
+	t.Setenv("TEST_TIME", "2019-12-18T00:35:49+08:00")
+	t.Setenv("TEST_SUB_URL", "https://golift.io/cnfg?rad=true")
+	t.Setenv("TEST_SUB_IP", "123.45.67.89")
 
 	c := &testSpecial{}
 	ok, err := (&cnfg.ENV{Pfx: "TEST"}).Unmarshal(c)
@@ -294,7 +297,7 @@ func testSpecialENV(a *assert.Assertions) {
 	a.Equal("123.45.67.89", c.Sub.IP.String(), "the IP wasn't parsed properly")
 	a.Nil(c.Durs)
 
-	os.Setenv("TEST_TIME", "not a real time")
+	t.Setenv("TEST_TIME", "not a real time")
 
 	c = &testSpecial{}
 	ok, err = (&cnfg.ENV{Pfx: "TEST"}).Unmarshal(c)

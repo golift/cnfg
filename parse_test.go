@@ -1,7 +1,6 @@
 package cnfg //nolint:testpackage
 
 import (
-	"os"
 	"reflect"
 	"testing"
 
@@ -28,7 +27,7 @@ func TestParseByteSlice(t *testing.T) { //nolint:paralleltest
 		F []byte `xml:"bytes,delenv"` //nolint:staticcheck
 	}
 
-	os.Setenv("D_BYTES", "byte slice incoming")
+	t.Setenv("D_BYTES", "byte slice incoming")
 
 	f := &test{}
 	ok, err := UnmarshalENV(f, "D")

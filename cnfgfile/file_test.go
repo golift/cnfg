@@ -164,5 +164,5 @@ func ExampleUnmarshal() {
 	}
 
 	fmt.Printf("interval: %v, location: %v, provided: %v", c.Interval, c.Location, c.Provided)
-	// Output: interval: 5m0s, location: Earth, provided: true
+	// Output: interval: 5m, location: Earth, provided: true
 }
