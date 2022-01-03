@@ -84,3 +84,13 @@ func TestUnmarshalJSON(t *testing.T) {
 	assert.Nil(t, err, "this method must not return an error")
 	assert.Equal(t, []byte(`"1h1m0s"`), b)
 }
+
+func TestString(t *testing.T) {
+	t.Parallel()
+
+	testDur := cnfg.Duration{Duration: time.Hour + time.Minute}
+	assert.Equal(t, "1h1m", testDur.String())
+
+	testDur = cnfg.Duration{Duration: time.Hour}
+	assert.Equal(t, "1h", testDur.String())
+}

@@ -94,9 +94,24 @@ func (d Duration) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + d.Duration.String() + `"`), nil
 }
 
+// String returns a Duration as string without trailing zero units.
+func (d *Duration) String() string {
+	dur := d.Duration.String()
+	if len(dur) > 3 && dur[len(dur)-3:] == "m0s" {
+		dur = dur[:len(dur)-2]
+	}
+
+	if len(dur) > 3 && dur[len(dur)-3:] == "h0m" {
+		dur = dur[:len(dur)-2]
+	}
+
+	return dur
+}
+
 // Make sure our struct satisfies the interface it's for.
 var (
 	_ encoding.TextUnmarshaler = (*Duration)(nil)
 	_ encoding.TextMarshaler   = (*Duration)(nil)
 	_ json.Marshaler           = (*Duration)(nil)
+	_ fmt.Stringer             = (*Duration)(nil)
 )
