@@ -95,7 +95,7 @@ func (d Duration) MarshalJSON() ([]byte, error) {
 }
 
 // String returns a Duration as string without trailing zero units.
-func (d *Duration) String() string {
+func (d Duration) String() string {
 	dur := d.Duration.String()
 	if len(dur) > 3 && dur[len(dur)-3:] == "m0s" {
 		dur = dur[:len(dur)-2]
