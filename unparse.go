@@ -18,17 +18,17 @@ type unparser struct {
 func (p *unparser) DeconStruct(field reflect.Value, prefix string) (Pairs, error) {
 	output := Pairs{}
 
-	t := field.Type().Elem()
-	for i := 0; i < t.NumField(); i++ { // Loop each struct member
-		tagval := strings.Split(t.Field(i).Tag.Get(p.Tag), ",")
+	elem := field.Type().Elem()
+	for idx := 0; idx < elem.NumField(); idx++ { // Loop each struct member
+		tagval := strings.Split(elem.Field(idx).Tag.Get(p.Tag), ",")
 		tag := strings.ToUpper(tagval[0]) // like "NAME" or "TIMEOUT"
 
-		if !field.Elem().Field(i).CanSet() || tag == "-" {
+		if !field.Elem().Field(idx).CanSet() || tag == "-" {
 			continue
 		}
 
-		if tag == "" && !t.Field(i).Anonymous {
-			tag = strings.ToUpper(t.Field(i).Name)
+		if tag == "" && !elem.Field(idx).Anonymous {
+			tag = strings.ToUpper(elem.Field(idx).Name)
 		}
 
 		tag = strings.Trim(strings.Join([]string{prefix, tag}, LevelSeparator), LevelSeparator)
@@ -40,7 +40,7 @@ func (p *unparser) DeconStruct(field reflect.Value, prefix string) (Pairs, error
 			}
 		}
 
-		o, err := p.Anything(field.Elem().Field(i), tag, omitempty)
+		o, err := p.Anything(field.Elem().Field(idx), tag, omitempty)
 		if err != nil {
 			return nil, err
 		}

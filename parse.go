@@ -24,11 +24,11 @@ func (p *parser) Struct(field reflect.Value, prefix string) (bool, error) {
 	var exitOk bool
 
 	t := field.Type().Elem()
-	for i := 0; i < t.NumField(); i++ { // Loop each struct member
-		tagval := strings.Split(t.Field(i).Tag.Get(p.Tag), ",")
+	for idx := 0; idx < t.NumField(); idx++ { // Loop each struct member
+		tagval := strings.Split(t.Field(idx).Tag.Get(p.Tag), ",")
 		shorttag := strings.ToUpper(tagval[0]) // like "NAME" or "TIMEOUT"
 
-		if !field.Elem().Field(i).CanSet() || shorttag == "-" {
+		if !field.Elem().Field(idx).CanSet() || shorttag == "-" {
 			continue // This _only_ works with reflection tags.
 		}
 
@@ -44,7 +44,7 @@ func (p *parser) Struct(field reflect.Value, prefix string) (bool, error) {
 		envval, ok := p.Vals[tag]                                                                     // see if it exists
 
 		//		log.Print("tag ", tag, " = ", envval)
-		exists, err := p.Anything(field.Elem().Field(i), tag, envval, ok, delenv)
+		exists, err := p.Anything(field.Elem().Field(idx), tag, envval, ok, delenv)
 		if err != nil {
 			return false, err
 		} else if exists {
@@ -225,8 +225,8 @@ func (p *parser) SliceValue(field reflect.Value, tag string, delenv bool) (bool,
 	var ok bool
 
 	total := field.Len()
-	for i := 0; i <= total; i++ {
-		ntag := strings.Join([]string{tag, strconv.Itoa(i)}, LevelSeparator)
+	for idx := 0; idx <= total; idx++ {
+		ntag := strings.Join([]string{tag, strconv.Itoa(idx)}, LevelSeparator)
 		envval, exists := p.Vals[ntag]
 
 		if delenv {
@@ -235,9 +235,9 @@ func (p *parser) SliceValue(field reflect.Value, tag string, delenv bool) (bool,
 
 		// Start with a blank value for this item
 		value := reflect.Indirect(reflect.New(field.Type().Elem()))
-		if i < field.Len() {
+		if idx < field.Len() {
 			// Use the passed in value if it exists.
-			value = reflect.Indirect(field.Index(i).Addr())
+			value = reflect.Indirect(field.Index(idx).Addr())
 		}
 
 		if exists, err := p.Anything(value, ntag, envval, exists, delenv); err != nil {
@@ -248,7 +248,7 @@ func (p *parser) SliceValue(field reflect.Value, tag string, delenv bool) (bool,
 
 		ok = true
 
-		if i >= field.Len() {
+		if idx >= field.Len() {
 			total++ // do one more iteration.
 
 			// The position in the ENV var is > slice size, so append.
@@ -258,7 +258,7 @@ func (p *parser) SliceValue(field reflect.Value, tag string, delenv bool) (bool,
 		}
 
 		// The position in the ENV var exists! Overwrite slice index directly.
-		field.Index(i).Set(value)
+		field.Index(idx).Set(value)
 	}
 
 	return ok, nil
@@ -276,18 +276,18 @@ func (p *parser) Map(field reflect.Value, tag string, delenv bool) (bool, error)
 		field.Set(reflect.MakeMap(field.Type()))
 	}
 
-	for k, v := range vals {
+	for key, val := range vals {
 		if delenv {
-			os.Unsetenv(k)
+			os.Unsetenv(key)
 		}
 
 		// Maps have 2 types. The index and the value. First, parse the index into its type.
 		keyval := reflect.Indirect(reflect.New(field.Type().Key()))
-		if _, err := p.Anything(keyval, tag, k, true, delenv); err != nil {
+		if _, err := p.Anything(keyval, tag, key, true, delenv); err != nil {
 			return false, err
 		}
 
-		if v == "" {
+		if val == "" {
 			// a blank env value was provided, set the field to nil.
 			ok = true
 
@@ -299,7 +299,7 @@ func (p *parser) Map(field reflect.Value, tag string, delenv bool) (bool, error)
 		// And now parse the second type: the value.
 		valval := reflect.Indirect(reflect.New(field.Type().Elem()))
 
-		exists, err := p.Anything(valval, strings.Join([]string{tag, k}, LevelSeparator), v, true, delenv)
+		exists, err := p.Anything(valval, strings.Join([]string{tag, key}, LevelSeparator), val, true, delenv)
 		if err != nil {
 			return false, err
 		}

@@ -10,18 +10,18 @@ import (
 func TestParseInt(t *testing.T) {
 	t.Parallel()
 
-	a := assert.New(t)
+	assert := assert.New(t)
 
 	for _, t := range []string{typeINT, typeINT8, typeINT16, typeINT32, typeINT64} {
 		i, err := parseInt(t, "1")
 
-		a.Equal(int64(1), i)
-		a.Nil(err)
+		assert.Equal(int64(1), i)
+		assert.Nil(err)
 	}
 }
 
 func TestParseByteSlice(t *testing.T) { //nolint:paralleltest
-	a := assert.New(t)
+	assert := assert.New(t)
 
 	type test struct {
 		F []byte `xml:"bytes,delenv"` //nolint:staticcheck
@@ -29,50 +29,50 @@ func TestParseByteSlice(t *testing.T) { //nolint:paralleltest
 
 	t.Setenv("D_BYTES", "byte slice incoming")
 
-	f := &test{}
-	ok, err := UnmarshalENV(f, "D")
+	test1val := &test{}
+	ok, err := UnmarshalENV(test1val, "D")
 
-	a.True(ok)
-	a.Nil(err)
-	a.Equal("byte slice incoming", string(f.F))
+	assert.True(ok)
+	assert.Nil(err)
+	assert.Equal("byte slice incoming", string(test1val.F))
 }
 
 func TestParseUint(t *testing.T) {
 	t.Parallel()
 
-	a := assert.New(t)
+	assert := assert.New(t)
 
 	type test struct {
 		F uint64
 	}
 
-	f := &test{}
-	g := reflect.ValueOf(f).Elem().Field(0)
+	config := &test{}
+	field := reflect.ValueOf(config).Elem().Field(0)
 
 	for _, t := range []string{typeUINT, typeUINT16, typeUINT32, typeUINT64} {
-		err := parseUint(g, t, "1")
+		err := parseUint(field, t, "1")
 
-		a.Equal(uint64(1), f.F)
-		a.Nil(err)
+		assert.Equal(uint64(1), config.F)
+		assert.Nil(err)
 	}
 
 	type test2 struct {
 		F byte
 	}
 
-	f2 := &test2{}
-	g = reflect.ValueOf(f2).Elem().Field(0)
+	test2val := &test2{}
+	field = reflect.ValueOf(test2val).Elem().Field(0)
 
-	err := parseUint(g, typeUINT8, "11")
-	a.NotNil(err, "must return an error when more than one byte is provided")
+	err := parseUint(field, typeUINT8, "11")
+	assert.NotNil(err, "must return an error when more than one byte is provided")
 
-	err = parseUint(g, typeUINT8, "f")
-	a.Nil(err, "must not return an error when only one byte is provided")
-	a.Equal(byte('f'), f2.F)
+	err = parseUint(field, typeUINT8, "f")
+	assert.Nil(err, "must not return an error when only one byte is provided")
+	assert.Equal(byte('f'), test2val.F)
 
-	err = parseUint(g, typeUINT8, "")
-	a.Nil(err, "must not return an error when only no bytes are provided")
-	a.Equal(uint8(0), f2.F)
+	err = parseUint(field, typeUINT8, "")
+	assert.Nil(err, "must not return an error when only no bytes are provided")
+	assert.Equal(uint8(0), test2val.F)
 }
 
 /*
@@ -86,7 +86,7 @@ func TestParseInterfaceError(t *testing.T) {
 
 	ok, err := (&Parser{}).Interface(reflect.ValueOf(F(0)), "", "")
 
-	a.Nil(err, "unaddressable value must return nil")
-	a.False(ok, "unaddressable value must return false")
+	assert.Nil(err, "unaddressable value must return nil")
+	assert.False(ok, "unaddressable value must return false")
 }
 */
