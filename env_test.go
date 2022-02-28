@@ -1,7 +1,7 @@
 package cnfg_test
 
 import (
-	"errors"
+	"fmt"
 	"net"
 	"net/url"
 	"os"
@@ -33,48 +33,48 @@ type testSubConfig struct {
 }
 
 // A few tests hit this.
-func testUnmarshalFileValues(assert *assert.Assertions, c *testStruct, err error, from string) { //nolint:varnamelen
+func testUnmarshalFileValues(assert *assert.Assertions, config *testStruct, err error, from string) {
 	from += " "
 
 	assert.Nil(err, "there should not be an error reading the test file")
 	// PointerSlice
-	assert.Equal(1, len(c.PointerSlice), from+"pointerslice is too short")
-	assert.EqualValues(true, c.PointerSlice[0].Bool, from+"the boolean was true")
-	assert.EqualValues(123.4567, *c.PointerSlice[0].FloatP, from+"the float64 was set to 123.4567")
-	assert.EqualValues(0, c.PointerSlice[0].Int, from+"int was not set so should be zero")
-	assert.Nil(c.PointerSlice[0].StringP, from+"the string pointer was not set so should remain nil")
+	assert.Equal(1, len(config.PointerSlice), from+"pointerslice is too short")
+	assert.EqualValues(true, config.PointerSlice[0].Bool, from+"the boolean was true")
+	assert.EqualValues(123.4567, *config.PointerSlice[0].FloatP, from+"the float64 was set to 123.4567")
+	assert.EqualValues(0, config.PointerSlice[0].Int, from+"int was not set so should be zero")
+	assert.Nil(config.PointerSlice[0].StringP, from+"the string pointer was not set so should remain nil")
 
 	// StructSlice
-	assert.Equal(1, len(c.StructSlice), from+"pointerslice is too short")
-	assert.EqualValues(false, c.StructSlice[0].Bool, from+"the boolean was missing and should be false")
-	assert.Nil(c.StructSlice[0].FloatP, from+"the float64 was missing and should be nil")
-	assert.EqualValues(123, c.StructSlice[0].Int, from+"int was set to 123")
-	assert.EqualValues("foo", *c.StructSlice[0].StringP, from+"the string was set to foo")
+	assert.Equal(1, len(config.StructSlice), from+"pointerslice is too short")
+	assert.EqualValues(false, config.StructSlice[0].Bool, from+"the boolean was missing and should be false")
+	assert.Nil(config.StructSlice[0].FloatP, from+"the float64 was missing and should be nil")
+	assert.EqualValues(123, config.StructSlice[0].Int, from+"int was set to 123")
+	assert.EqualValues("foo", *config.StructSlice[0].StringP, from+"the string was set to foo")
 
 	// Struct
-	assert.EqualValues(false, c.Struct.Bool, from+"the boolean was false and should be false")
-	assert.Nil(c.Struct.FloatP, from+"the float64 was missing and should be nil")
-	assert.EqualValues(0, c.Struct.Int, from+"int was not set and must be 0")
-	assert.Nil(c.Struct.StringP, from+"the string was missing and should be nil")
+	assert.EqualValues(false, config.Struct.Bool, from+"the boolean was false and should be false")
+	assert.Nil(config.Struct.FloatP, from+"the float64 was missing and should be nil")
+	assert.EqualValues(0, config.Struct.Int, from+"int was not set and must be 0")
+	assert.Nil(config.Struct.StringP, from+"the string was missing and should be nil")
 
 	// PointerStruct
-	assert.NotNil(c.PointerStruct, from+"the pointer struct has values and must not be nil")
-	assert.EqualValues(false, c.PointerStruct.Bool, from+"the boolean was missing and should be false")
-	assert.Nil(c.PointerStruct.FloatP, from+"the float64 was missing and should be nil")
-	assert.EqualValues(0, c.PointerStruct.Int, from+"int was not set and must be 0")
-	assert.EqualValues("foo2", *c.PointerStruct.StringP, from+"the string was set to foo2")
+	assert.NotNil(config.PointerStruct, from+"the pointer struct has values and must not be nil")
+	assert.EqualValues(false, config.PointerStruct.Bool, from+"the boolean was missing and should be false")
+	assert.Nil(config.PointerStruct.FloatP, from+"the float64 was missing and should be nil")
+	assert.EqualValues(0, config.PointerStruct.Int, from+"int was not set and must be 0")
+	assert.EqualValues("foo2", *config.PointerStruct.StringP, from+"the string was set to foo2")
 
 	// PointerSlice2
-	assert.Equal(0, len(c.PointerSlice2), from+"pointerslice2 is too long")
+	assert.Equal(0, len(config.PointerSlice2), from+"pointerslice2 is too long")
 	// StructSlice2
-	assert.Equal(0, len(c.StructSlice2), from+"structslice2 is too long")
+	assert.Equal(0, len(config.StructSlice2), from+"structslice2 is too long")
 	// Struct2
-	assert.EqualValues(false, c.Struct2.Bool, from+"this must be zero value")
-	assert.Nil(c.Struct2.FloatP, from+"this must be zero value")
-	assert.EqualValues(0, c.Struct2.Int, from+"this must be zero value")
-	assert.Nil(c.Struct2.StringP, from+"this must be zero value")
+	assert.EqualValues(false, config.Struct2.Bool, from+"this must be zero value")
+	assert.Nil(config.Struct2.FloatP, from+"this must be zero value")
+	assert.EqualValues(0, config.Struct2.Int, from+"this must be zero value")
+	assert.Nil(config.Struct2.StringP, from+"this must be zero value")
 	// PointerStruct2
-	assert.Nil(c.PointerStruct2, from+"pointer struct 2 must be nil")
+	assert.Nil(config.PointerStruct2, from+"pointer struct 2 must be nil")
 }
 
 func TestBrokenENV(t *testing.T) { //nolint:paralleltest // cannot parallel env vars.
@@ -95,21 +95,22 @@ func TestBrokenENV(t *testing.T) { //nolint:paralleltest // cannot parallel env 
 
 	assert := assert.New(t)
 	c := &testBroken{}
-	ook, err := cnfg.UnmarshalENV(c, "TEST")
-	assert.False(ook)
+	worked, err := cnfg.UnmarshalENV(c, "TEST")
+
 	assert.NotNil(err, "an error must be returned for an unsupported type")
+	assert.False(worked)
 
-	c2 := &testBroken2{}
-	ook, err = cnfg.UnmarshalENV(c2, "TEST")
-
-	assert.NotNil(err, "an error must be returned for an unsupported map type")
-	assert.False(ook)
-
-	c3 := &testBroken3{}
-	ook, err = cnfg.UnmarshalENV(c3, "TEST")
+	config := &testBroken2{}
+	worked, err = cnfg.UnmarshalENV(config, "TEST")
 
 	assert.NotNil(err, "an error must be returned for an unsupported map type")
-	assert.False(ook)
+	assert.False(worked)
+
+	config2 := &testBroken3{}
+	worked, err = cnfg.UnmarshalENV(config2, "TEST")
+
+	assert.NotNil(err, "an error must be returned for an unsupported map type")
+	assert.False(worked)
 }
 
 func TestUnmarshalENVerrors(t *testing.T) { //nolint:paralleltest // cannot parallel env vars.
@@ -130,18 +131,19 @@ func TestUnmarshalENVerrors(t *testing.T) { //nolint:paralleltest // cannot para
 	t.Setenv("YO_YUP_server100_0", "256")
 	t.Setenv("YO_ERROR", "this is an error")
 
-	testStruct1 := tester{}
-	ook, err := cnfg.UnmarshalENV(&testStruct1, "YO")
-	assert.True(ook)
+	config := tester{}
+	worked, err := cnfg.UnmarshalENV(&config, "YO")
+
 	assert.Nil(err, "maps are supported and must not produce an error")
 	assert.Empty(os.Getenv("YO_WORKS_foo2string"), "delenv must delete the environment variable")
 	assert.Empty(os.Getenv("YO_WORKS_foostring"), "delenv must delete the environment variable")
-	assert.Nil(testStruct1.unexpd)
-	assert.Equal("fooval", testStruct1.Works["foostring"])
-	assert.Equal("foo2val", testStruct1.Works["foo2string"])
-	assert.Equal([]int{128, 129, 130}, testStruct1.Rad["server99"])
-	assert.Equal([]int{256}, testStruct1.Rad["server100"])
-	assert.Equal(errors.New("this is an error"), testStruct1.Error) // nolint: goerr113
+	assert.True(worked)
+	assert.Nil(config.unexpd)
+	assert.Equal("fooval", config.Works["foostring"])
+	assert.Equal("foo2val", config.Works["foo2string"])
+	assert.Equal([]int{128, 129, 130}, config.Rad["server99"])
+	assert.Equal([]int{256}, config.Rad["server100"])
+	assert.Equal(fmt.Errorf("this is an error"), config.Error) // nolint: goerr113
 
 	type tester2 struct {
 		NotBroken  []map[string]string  `xml:"broken"`
@@ -157,18 +159,19 @@ func TestUnmarshalENVerrors(t *testing.T) { //nolint:paralleltest // cannot para
 	t.Setenv("MORE_STUFF_0_freetime", "at-pops")
 	t.Setenv("MORE_STUFF_0_a", "")
 
-	testStruct := tester2{HasStuff: []map[string]string{{"freesoda": "at-pops"}, {"a": "v"}}}
-	ok, err := cnfg.UnmarshalENV(&testStruct, "MORE")
-	assert.True(ok)
-	assert.Nil(err, "map slices are supported and must not produce an error")
+	config2 := tester2{HasStuff: []map[string]string{{"freesoda": "at-pops"}, {"a": "v"}}}
+	worked, err = cnfg.UnmarshalENV(&config2, "MORE")
 
-	f := *testStruct.NotBroken2[0]
-	assert.EqualValues("at-charlies", testStruct.NotBroken[0]["freesauce"])
+	assert.Nil(err, "map slices are supported and must not produce an error")
+	assert.True(worked)
+
+	f := *config2.NotBroken2[0]
+	assert.EqualValues("at-charlies", config2.NotBroken[0]["freesauce"])
 	assert.EqualValues("at-daves", f["freesoup"])
-	assert.EqualValues("not-at-pops", testStruct.HasStuff[0]["freesoda"])
-	assert.EqualValues("at-pops", testStruct.HasStuff[0]["freetime"])
-	assert.EqualValues("", testStruct.HasStuff[0]["a"], "the empty map value must be set when the env var is empty")
-	assert.Nil(testStruct.NotBroken3, "a nil map without overrides must remain nil")
+	assert.EqualValues("not-at-pops", config2.HasStuff[0]["freesoda"])
+	assert.EqualValues("at-pops", config2.HasStuff[0]["freetime"])
+	assert.EqualValues("", config2.HasStuff[0]["a"], "the empty map value must be set when the env var is empty")
+	assert.Nil(config2.NotBroken3, "a nil map without overrides must remain nil")
 }
 
 // do not run this in parallel with other tests that change environment variables.
@@ -201,15 +204,15 @@ func testThingENV(t *testing.T, assert *assert.Assertions) {
 	t.Setenv("PRE_STRUCT_BOOL", "false")
 	t.Setenv("PRE_PSTRUCT_STRING", "foo2")
 
-	testStruct := &testStruct{}
+	config := &testStruct{}
 
-	ok, err := cnfg.UnmarshalENV(testStruct, "PRE")
+	ok, err := cnfg.UnmarshalENV(config, "PRE")
 	assert.True(ok, "ok must be true since things must be parsed")
-	testUnmarshalFileValues(assert, testStruct, err, "testThingENV")
+	testUnmarshalFileValues(assert, config, err, "testThingENV")
 	// do it again, and we should get the same result
-	ok, err = cnfg.UnmarshalENV(testStruct, "PRE")
+	ok, err = cnfg.UnmarshalENV(config, "PRE")
 	assert.True(ok, "ok must be true since things must be parsed")
-	testUnmarshalFileValues(assert, testStruct, err, "testThingENV")
+	testUnmarshalFileValues(assert, config, err, "testThingENV")
 }
 
 func testOscureENV(t *testing.T, assert *assert.Assertions) {
@@ -284,8 +287,9 @@ func testSpecialENV(t *testing.T, assert *assert.Assertions) {
 	t.Setenv("TEST_SUB_IP", "123.45.67.89")
 
 	config := &testSpecial{}
-	ook, err := (&cnfg.ENV{Pfx: "TEST"}).Unmarshal(config)
-	assert.True(ook, "ok must be true since things must be parsed")
+	worked, err := (&cnfg.ENV{Pfx: "TEST"}).Unmarshal(config)
+
+	assert.True(worked, "ok must be true since things must be parsed")
 	assert.Nil(err)
 	assert.Equal(time.Minute, config.Dur)
 	assert.Equal(time.Second, config.CDur.Duration)
@@ -296,8 +300,8 @@ func testSpecialENV(t *testing.T, assert *assert.Assertions) {
 	t.Setenv("TEST_TIME", "not a real time")
 
 	config = &testSpecial{}
-	ook, err = (&cnfg.ENV{Pfx: "TEST"}).Unmarshal(config)
+	worked, err = (&cnfg.ENV{Pfx: "TEST"}).Unmarshal(config)
 
-	assert.False(ook, "cannot parse an invalid time")
+	assert.False(worked, "cannot parse an invalid time")
 	assert.NotNil(err, "cannot parse an invalid time")
 }

@@ -14,15 +14,15 @@ const pairSize = 2
 // Get allows getting only specific env variables by prefix.
 // The prefix is trimmed before returning.
 func (p *Pairs) Get(prefix string) Pairs {
-	pair := make(Pairs)
+	mapPairs := make(Pairs)
 
 	for k, v := range *p {
 		if strings.HasPrefix(k, prefix) {
-			pair[strings.SplitN(strings.TrimPrefix(k, prefix+LevelSeparator), LevelSeparator, pairSize)[0]] = v
+			mapPairs[strings.SplitN(strings.TrimPrefix(k, prefix+LevelSeparator), LevelSeparator, pairSize)[0]] = v
 		}
 	}
 
-	return pair
+	return mapPairs
 }
 
 // Set simply sets a value in a map.
@@ -65,16 +65,16 @@ func (e *ENV) UnmarshalMap(pairs map[string]string, i interface{}) (bool, error)
 // MapEnvPairs turns the pairs returned by os.Environ() into a map[string]string.
 // Providing a prefix returns only variables with that prefix.
 func MapEnvPairs(prefix string, pairs []string) Pairs {
-	pairOut := make(Pairs)
+	mapPairs := make(Pairs)
 
 	for _, pair := range pairs {
 		split := strings.SplitN(pair, "=", pairSize)
 		if len(split) == pairSize && (prefix == "" || strings.HasPrefix(split[0], prefix)) {
-			pairOut[split[0]] = split[1]
+			mapPairs[split[0]] = split[1]
 		}
 	}
 
-	return pairOut
+	return mapPairs
 }
 
 // Env turns the Pairs map into an envionrment variable slice.

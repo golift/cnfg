@@ -23,18 +23,20 @@ func TestUnmarshalMap(t *testing.T) {
 		Baz string `xml:"baz"`
 	}
 
-	testConfig := mapTester{}
-	found, err := cnfg.UnmarshalMap(pairs, &testConfig)
-	assert.True(found)
-	assert.Nil(err)
-	assert.EqualValues("bar", testConfig.Foo)
+	config := mapTester{}
+	worked, err := cnfg.UnmarshalMap(pairs, &config)
 
-	found, err = cnfg.UnmarshalMap(pairs, testConfig)
-	assert.False(found)
+	assert.Nil(err)
+	assert.True(worked)
+	assert.EqualValues("bar", config.Foo)
+
+	worked, err = cnfg.UnmarshalMap(pairs, config)
+
+	assert.False(worked)
 	assert.NotNil(err, "must have an error when attempting unmarshal to non-pointer")
 
-	found, err = (&cnfg.ENV{}).UnmarshalMap(pairs, &testConfig)
-	assert.True(found)
+	worked, err = (&cnfg.ENV{}).UnmarshalMap(pairs, &config)
+	assert.True(worked)
 	assert.Nil(err)
 }
 
@@ -49,7 +51,7 @@ func ExampleUnmarshalMap() {
 	}
 
 	// Create a pointer to unmarshal your map into.
-	testConfig := &myConfig{}
+	config := &myConfig{}
 
 	// Generally you'd use MapEnvPairs() to create a map from a slice of []string.
 	// You can also get your data from any other source, as long as it can be
@@ -64,14 +66,14 @@ func ExampleUnmarshalMap() {
 	pairs["NESTED_SUBSLICE_0"] = "first slice value"
 	pairs["NESTED_SUBMAP_mapKey"] = "first map key value"
 
-	ok, err := cnfg.UnmarshalMap(pairs, testConfig)
+	worked, err := cnfg.UnmarshalMap(pairs, config)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("ok: %v, key: %v, key2: %v\n", ok, testConfig.Key, testConfig.Key2)
-	fmt.Println("map:", testConfig.Nested.SubMap)
-	fmt.Println("slice:", testConfig.Nested.SubSlice)
+	fmt.Printf("ok: %v, key: %v, key2: %v\n", worked, config.Key, config.Key2)
+	fmt.Println("map:", config.Nested.SubMap)
+	fmt.Println("slice:", config.Nested.SubSlice)
 	// Output: ok: true, key: some env value, key2: some other env value
 	// map: map[mapKey:first map key value]
 	// slice: [first slice value]
