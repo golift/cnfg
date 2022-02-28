@@ -46,8 +46,7 @@ func MarshalENV(i interface{}, prefix string) (Pairs, error) {
 	return (&ENV{Pfx: prefix, Tag: ENVTag}).Marshal(i)
 }
 
-// Unmarshal parses and processes environment variables into the provided
-// interface. Uses the Prefix and Tag name from the &ENV{} struct values.
+// Marshal converts deconstructs a data structure into environment variable pairs.
 func (e *ENV) Marshal(i interface{}) (Pairs, error) {
 	value := reflect.ValueOf(i)
 	if value.Kind() != reflect.Ptr || value.Elem().Kind() != reflect.Struct {
