@@ -50,18 +50,18 @@ func (t *TimeX) UnmarshalENV(tag, val string) error {
 // This simple example shows how you may use the ENVUnmarshaler interface.
 // This shows how to use two environment variables to set one custom value.
 func ExampleENVUnmarshaler() {
-	c := &AppConfig{}
+	config := &AppConfig{}
 
 	os.Setenv("APP_IN", "5m")
 	os.Setenv("APP_IN_X", "10")
 	os.Setenv("APP_NAME", "myApp")
 
-	_, err := cnfg.UnmarshalENV(c, "APP")
+	_, err := cnfg.UnmarshalENV(config, "APP")
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("%s starts in %v", c.Name, c.Special)
+	fmt.Printf("%s starts in %v", config.Name, config.Special)
 	// Output: myApp starts in 50m0s
 }
 

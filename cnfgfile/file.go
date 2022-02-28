@@ -23,25 +23,25 @@ var ErrNoFile = fmt.Errorf("must provide at least 1 file to unmarshal")
 // or toml packages. If the file name contains an appropriate suffix it is
 // unmarshaled with the corresponding package. If the suffix is missing, TOML
 // is assumed. Works with multiple files, so you can have stacked configurations.
-func Unmarshal(c interface{}, configFile ...string) error {
+func Unmarshal(config interface{}, configFile ...string) error {
 	if len(configFile) == 0 {
 		return ErrNoFile
 	}
 
-	for _, f := range configFile {
-		buf, err := ioutil.ReadFile(f)
+	for _, fileName := range configFile {
+		buf, err := ioutil.ReadFile(fileName)
 
 		switch {
 		case err != nil:
 			return fmt.Errorf("reading file %s: %w", configFile, err)
-		case strings.Contains(f, ".json"):
-			err = json.Unmarshal(buf, c)
-		case strings.Contains(f, ".xml"):
-			err = xml.Unmarshal(buf, c)
-		case strings.Contains(f, ".yaml"):
-			err = yaml.Unmarshal(buf, c)
+		case strings.Contains(fileName, ".json"):
+			err = json.Unmarshal(buf, config)
+		case strings.Contains(fileName, ".xml"):
+			err = xml.Unmarshal(buf, config)
+		case strings.Contains(fileName, ".yaml"):
+			err = yaml.Unmarshal(buf, config)
 		default:
-			err = toml.Unmarshal(buf, c)
+			err = toml.Unmarshal(buf, config)
 		}
 
 		if err != nil {

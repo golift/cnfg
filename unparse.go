@@ -18,17 +18,17 @@ type unparser struct {
 func (p *unparser) DeconStruct(field reflect.Value, prefix string) (Pairs, error) {
 	output := Pairs{}
 
-	t := field.Type().Elem()
-	for i := 0; i < t.NumField(); i++ { // Loop each struct member
-		tagval := strings.Split(t.Field(i).Tag.Get(p.Tag), ",")
+	element := field.Type().Elem()
+	for idx := 0; idx < element.NumField(); idx++ { // Loop each struct member
+		tagval := strings.Split(element.Field(idx).Tag.Get(p.Tag), ",")
 		tag := strings.ToUpper(tagval[0]) // like "NAME" or "TIMEOUT"
 
-		if !field.Elem().Field(i).CanSet() || tag == "-" {
+		if !field.Elem().Field(idx).CanSet() || tag == "-" {
 			continue
 		}
 
-		if tag == "" && !t.Field(i).Anonymous {
-			tag = strings.ToUpper(t.Field(i).Name)
+		if tag == "" && !element.Field(idx).Anonymous {
+			tag = strings.ToUpper(element.Field(idx).Name)
 		}
 
 		tag = strings.Trim(strings.Join([]string{prefix, tag}, LevelSeparator), LevelSeparator)
@@ -40,7 +40,7 @@ func (p *unparser) DeconStruct(field reflect.Value, prefix string) (Pairs, error
 			}
 		}
 
-		o, err := p.Anything(field.Elem().Field(i), tag, omitempty)
+		o, err := p.Anything(field.Elem().Field(idx), tag, omitempty)
 		if err != nil {
 			return nil, err
 		}
@@ -51,7 +51,7 @@ func (p *unparser) DeconStruct(field reflect.Value, prefix string) (Pairs, error
 	return output, nil
 }
 
-func (p *unparser) Anything(field reflect.Value, tag string, omitempty bool) (Pairs, error) {
+func (p *unparser) Anything(field reflect.Value, tag string, omitempty bool) (Pairs, error) { //nolint:cyclop
 	if field.IsZero() && omitempty {
 		return Pairs{}, nil
 	}
@@ -132,23 +132,23 @@ func (p *unparser) Interface(field reflect.Value, tag string, omitempty bool) (P
 func (p *unparser) Member(field reflect.Value, tag string, omitempty bool) (Pairs, error) {
 	output := Pairs{}
 
-	switch fieldType := field.Type().String(); fieldType {
+	switch field.Interface().(type) {
 	// Handle each member type appropriately (differently).
-	case typeError:
+	case error:
 		output.Set(tag, field.Interface().(error).Error())
-	case typeString:
+	case string:
 		output.Set(tag, field.String())
-	case typeUINT, typeUINT8, typeUINT16, typeUINT32, typeUINT64:
+	case uint, uint8, uint16, uint32, uint64:
 		output.Set(tag, strconv.FormatUint(field.Uint(), base10))
-	case typeINT, typeINT8, typeINT16, typeINT32, typeINT64:
+	case int, int8, int16, int32, int64:
 		output.Set(tag, strconv.FormatInt(field.Int(), base10))
-	case typeFloat64:
+	case float64:
 		output.Set(tag, strconv.FormatFloat(field.Float(), 'f', -1, bits64))
-	case typeFloat32:
+	case float32:
 		output.Set(tag, strconv.FormatFloat(field.Float(), 'f', -1, bits32))
-	case typeDur:
+	case time.Duration:
 		output.Set(tag, (time.Duration(field.Int()) * time.Nanosecond).String())
-	case typeBool:
+	case bool:
 		output.Set(tag, fmt.Sprintf("%v", field.Bool()))
 	}
 

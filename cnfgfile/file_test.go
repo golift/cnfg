@@ -29,64 +29,64 @@ type testSubConfig struct {
 	FloatP  *float64 `json:"float" xml:"float" yaml:"float" toml:"float"`
 }
 
-func testUnmarshalValues(a *assert.Assertions, c *testStruct, err error, from string) {
+func testUnmarshalValues(assert *assert.Assertions, config *testStruct, err error, from string) {
 	from += " "
 
-	a.Nil(err, "there should not be an error reading the test file")
+	assert.Nil(err, "there should not be an error reading the test file")
 	// PointerSlice
-	a.Equal(1, len(c.PointerSlice), from+"pointerslice is too short")
-	a.EqualValues(true, c.PointerSlice[0].Bool, from+"the boolean was true")
-	a.EqualValues(123.4567, *c.PointerSlice[0].FloatP, from+"the float64 was set to 123.4567")
-	a.EqualValues(0, c.PointerSlice[0].Int, from+"int was not set so should be zero")
-	a.Nil(c.PointerSlice[0].StringP, from+"the string pointer was not set so should remain nil")
+	assert.Equal(1, len(config.PointerSlice), from+"pointerslice is too short")
+	assert.EqualValues(true, config.PointerSlice[0].Bool, from+"the boolean was true")
+	assert.EqualValues(123.4567, *config.PointerSlice[0].FloatP, from+"the float64 was set to 123.4567")
+	assert.EqualValues(0, config.PointerSlice[0].Int, from+"int was not set so should be zero")
+	assert.Nil(config.PointerSlice[0].StringP, from+"the string pointer was not set so should remain nil")
 
 	// StructSlice
-	a.Equal(1, len(c.StructSlice), from+"pointerslice is too short")
-	a.EqualValues(false, c.StructSlice[0].Bool, from+"the boolean was missing and should be false")
-	a.Nil(c.StructSlice[0].FloatP, from+"the float64 was missing and should be nil")
-	a.EqualValues(123, c.StructSlice[0].Int, from+"int was set to 123")
-	a.EqualValues("foo", *c.StructSlice[0].StringP, from+"the string was set to foo")
+	assert.Equal(1, len(config.StructSlice), from+"pointerslice is too short")
+	assert.EqualValues(false, config.StructSlice[0].Bool, from+"the boolean was missing and should be false")
+	assert.Nil(config.StructSlice[0].FloatP, from+"the float64 was missing and should be nil")
+	assert.EqualValues(123, config.StructSlice[0].Int, from+"int was set to 123")
+	assert.EqualValues("foo", *config.StructSlice[0].StringP, from+"the string was set to foo")
 
 	// Struct
-	a.EqualValues(false, c.Struct.Bool, from+"the boolean was false and should be false")
-	a.Nil(c.Struct.FloatP, from+"the float64 was missing and should be nil")
-	a.EqualValues(0, c.Struct.Int, from+"int was not set and must be 0")
-	a.Nil(c.Struct.StringP, from+"the string was missing and should be nil")
+	assert.EqualValues(false, config.Struct.Bool, from+"the boolean was false and should be false")
+	assert.Nil(config.Struct.FloatP, from+"the float64 was missing and should be nil")
+	assert.EqualValues(0, config.Struct.Int, from+"int was not set and must be 0")
+	assert.Nil(config.Struct.StringP, from+"the string was missing and should be nil")
 
 	// PointerStruct
-	a.NotNil(c.PointerStruct, from+"the pointer struct has values and must not be nil")
-	a.EqualValues(false, c.PointerStruct.Bool, from+"the boolean was missing and should be false")
-	a.Nil(c.PointerStruct.FloatP, from+"the float64 was missing and should be nil")
-	a.EqualValues(0, c.PointerStruct.Int, from+"int was not set and must be 0")
-	a.EqualValues("foo2", *c.PointerStruct.StringP, from+"the string was set to foo2")
+	assert.NotNil(config.PointerStruct, from+"the pointer struct has values and must not be nil")
+	assert.EqualValues(false, config.PointerStruct.Bool, from+"the boolean was missing and should be false")
+	assert.Nil(config.PointerStruct.FloatP, from+"the float64 was missing and should be nil")
+	assert.EqualValues(0, config.PointerStruct.Int, from+"int was not set and must be 0")
+	assert.EqualValues("foo2", *config.PointerStruct.StringP, from+"the string was set to foo2")
 
 	// PointerSlice2
-	a.Equal(0, len(c.PointerSlice2), from+"pointerslice2 is too long")
+	assert.Equal(0, len(config.PointerSlice2), from+"pointerslice2 is too long")
 	// StructSlice2
-	a.Equal(0, len(c.StructSlice2), from+"structslice2 is too long")
+	assert.Equal(0, len(config.StructSlice2), from+"structslice2 is too long")
 	// Struct2
-	a.EqualValues(false, c.Struct2.Bool, from+"this must be zero value")
-	a.Nil(c.Struct2.FloatP, from+"this must be zero value")
-	a.EqualValues(0, c.Struct2.Int, from+"this must be zero value")
-	a.Nil(c.Struct2.StringP, from+"this must be zero value")
+	assert.EqualValues(false, config.Struct2.Bool, from+"this must be zero value")
+	assert.Nil(config.Struct2.FloatP, from+"this must be zero value")
+	assert.EqualValues(0, config.Struct2.Int, from+"this must be zero value")
+	assert.Nil(config.Struct2.StringP, from+"this must be zero value")
 	// PointerStruct2
-	a.Nil(c.PointerStruct2, from+"pointer struct 2 must be nil")
+	assert.Nil(config.PointerStruct2, from+"pointer struct 2 must be nil")
 }
 
 func TestUnmarshalErrors(t *testing.T) {
 	t.Parallel()
 
-	a := assert.New(t)
-	c := &testStruct{}
+	assert := assert.New(t)
+	config := &testStruct{}
 
-	err := cnfgfile.Unmarshal(c, "/etc/passwd")
-	a.NotNil(err, "there should be an error parsing a password file")
+	err := cnfgfile.Unmarshal(config, "/etc/passwd")
+	assert.NotNil(err, "there should be an error parsing a password file")
 
-	err = cnfgfile.Unmarshal(c, "no file here")
-	a.NotNil(err, "there should be an error parsing a missing file")
+	err = cnfgfile.Unmarshal(config, "no file here")
+	assert.NotNil(err, "there should be an error parsing a missing file")
 
-	err = cnfgfile.Unmarshal(c)
-	a.NotNil(err, "there should be an error parsing a nil file")
+	err = cnfgfile.Unmarshal(config)
+	assert.NotNil(err, "there should be an error parsing a nil file")
 }
 
 func TestUnmarshalJSON(t *testing.T) {
@@ -153,16 +153,16 @@ func ExampleUnmarshal() {
 	}
 
 	// Start with an empty config. Or set some defaults beforehand.
-	c := &Config{}
+	config := &Config{}
 
 	// Simply pass in your config file. If it contains ".yaml" it will be parsed as YAML.
 	// Same for ".xml" and ".json". If the file has none of these extensions it is parsed
 	// as TOML. Meaning if you name your config "config.conf" it needs ot be TOML formatted.
-	err = cnfgfile.Unmarshal(c, path)
+	err = cnfgfile.Unmarshal(config, path)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("interval: %v, location: %v, provided: %v", c.Interval, c.Location, c.Provided)
+	fmt.Printf("interval: %v, location: %v, provided: %v", config.Interval, config.Location, config.Provided)
 	// Output: interval: 5m, location: Earth, provided: true
 }

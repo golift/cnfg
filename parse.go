@@ -2,6 +2,7 @@ package cnfg
 
 import (
 	"encoding"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -24,11 +25,11 @@ func (p *parser) Struct(field reflect.Value, prefix string) (bool, error) {
 	var exitOk bool
 
 	t := field.Type().Elem()
-	for i := 0; i < t.NumField(); i++ { // Loop each struct member
-		tagval := strings.Split(t.Field(i).Tag.Get(p.Tag), ",")
+	for idx := 0; idx < t.NumField(); idx++ { // Loop each struct member
+		tagval := strings.Split(t.Field(idx).Tag.Get(p.Tag), ",")
 		shorttag := strings.ToUpper(tagval[0]) // like "NAME" or "TIMEOUT"
 
-		if !field.Elem().Field(i).CanSet() || shorttag == "-" {
+		if !field.Elem().Field(idx).CanSet() || shorttag == "-" {
 			continue // This _only_ works with reflection tags.
 		}
 
@@ -44,7 +45,7 @@ func (p *parser) Struct(field reflect.Value, prefix string) (bool, error) {
 		envval, ok := p.Vals[tag]                                                                     // see if it exists
 
 		//		log.Print("tag ", tag, " = ", envval)
-		exists, err := p.Anything(field.Elem().Field(i), tag, envval, ok, delenv)
+		exists, err := p.Anything(field.Elem().Field(idx), tag, envval, ok, delenv)
 		if err != nil {
 			return false, err
 		} else if exists {
@@ -144,48 +145,53 @@ func (p *parser) Interface(field reflect.Value, tag, envval string) (bool, error
 }
 
 // Member parses non-struct, non-slice struct-member types.
-func (p *parser) Member(field reflect.Value, tag, envval string) (bool, error) {
+func (p *parser) Member(field reflect.Value, tag, envval string) (bool, error) { //nolint:cyclop
 	var err error
 
-	switch fieldType := field.Type().String(); fieldType {
+	// Errors cannot be type-switched from reflection for some reason.
+	if field.Type().String() == "error" { // lul
+		field.Set(reflect.ValueOf(errors.New(envval))) // nolint: goerr113
+
+		return true, nil
+	}
+
+	switch fieldType := field.Interface().(type) {
 	// Handle each member type appropriately (differently).
-	case typeString:
+	case string:
 		// SetString is a reflect package method to update a struct member by index.
 		field.SetString(envval)
-	case typeUINT, typeUINT8, typeUINT16, typeUINT32, typeUINT64:
+	case uint, uint8, uint16, uint32, uint64:
 		err = parseUint(field, fieldType, envval)
-	case typeINT, typeINT8, typeINT16, typeINT32, typeINT64:
+	case int, int8, int16, int32, int64:
 		var val int64
 
 		val, err = parseInt(fieldType, envval)
 		field.SetInt(val)
-	case typeFloat64:
+	case float64:
 		var val float64
 
 		val, err = strconv.ParseFloat(envval, bits64)
 		field.SetFloat(val)
-	case typeFloat32:
+	case float32:
 		var val float64
 
 		val, err = strconv.ParseFloat(envval, bits32)
 		field.SetFloat(val)
-	case typeDur:
+	case time.Duration:
 		var val time.Duration
 
 		val, err = time.ParseDuration(envval)
 		field.Set(reflect.ValueOf(val))
-	case typeBool:
+	case bool:
 		var val bool
 
 		val, err = strconv.ParseBool(envval)
 		field.SetBool(val)
-	case typeError: // lul
-		field.Set(reflect.ValueOf(fmt.Errorf(envval))) // nolint: goerr113
 	default:
 		var ok bool
 
 		if ok, err = p.Interface(field, tag, envval); err == nil && !ok {
-			err = fmt.Errorf("%w: %v (val: %s)", ErrUnsupported, field.Type(), envval)
+			err = fmt.Errorf("%w: '%T' (env value: %s)", ErrUnsupported, field.Type(), envval)
 		}
 	}
 
@@ -225,8 +231,8 @@ func (p *parser) SliceValue(field reflect.Value, tag string, delenv bool) (bool,
 	var ok bool
 
 	total := field.Len()
-	for i := 0; i <= total; i++ {
-		ntag := strings.Join([]string{tag, strconv.Itoa(i)}, LevelSeparator)
+	for idx := 0; idx <= total; idx++ {
+		ntag := strings.Join([]string{tag, strconv.Itoa(idx)}, LevelSeparator)
 		envval, exists := p.Vals[ntag]
 
 		if delenv {
@@ -235,9 +241,9 @@ func (p *parser) SliceValue(field reflect.Value, tag string, delenv bool) (bool,
 
 		// Start with a blank value for this item
 		value := reflect.Indirect(reflect.New(field.Type().Elem()))
-		if i < field.Len() {
+		if idx < field.Len() {
 			// Use the passed in value if it exists.
-			value = reflect.Indirect(field.Index(i).Addr())
+			value = reflect.Indirect(field.Index(idx).Addr())
 		}
 
 		if exists, err := p.Anything(value, ntag, envval, exists, delenv); err != nil {
@@ -248,7 +254,7 @@ func (p *parser) SliceValue(field reflect.Value, tag string, delenv bool) (bool,
 
 		ok = true
 
-		if i >= field.Len() {
+		if idx >= field.Len() {
 			total++ // do one more iteration.
 
 			// The position in the ENV var is > slice size, so append.
@@ -258,7 +264,7 @@ func (p *parser) SliceValue(field reflect.Value, tag string, delenv bool) (bool,
 		}
 
 		// The position in the ENV var exists! Overwrite slice index directly.
-		field.Index(i).Set(value)
+		field.Index(idx).Set(value)
 	}
 
 	return ok, nil
@@ -276,18 +282,18 @@ func (p *parser) Map(field reflect.Value, tag string, delenv bool) (bool, error)
 		field.Set(reflect.MakeMap(field.Type()))
 	}
 
-	for k, v := range vals {
+	for key, val := range vals {
 		if delenv {
-			os.Unsetenv(k)
+			os.Unsetenv(key)
 		}
 
 		// Maps have 2 types. The index and the value. First, parse the index into its type.
 		keyval := reflect.Indirect(reflect.New(field.Type().Key()))
-		if _, err := p.Anything(keyval, tag, k, true, delenv); err != nil {
+		if _, err := p.Anything(keyval, tag, key, true, delenv); err != nil {
 			return false, err
 		}
 
-		if v == "" {
+		if val == "" {
 			// a blank env value was provided, set the field to nil.
 			ok = true
 
@@ -299,7 +305,7 @@ func (p *parser) Map(field reflect.Value, tag string, delenv bool) (bool, error)
 		// And now parse the second type: the value.
 		valval := reflect.Indirect(reflect.New(field.Type().Elem()))
 
-		exists, err := p.Anything(valval, strings.Join([]string{tag, k}, LevelSeparator), v, true, delenv)
+		exists, err := p.Anything(valval, strings.Join([]string{tag, key}, LevelSeparator), val, true, delenv)
 		if err != nil {
 			return false, err
 		}
@@ -315,16 +321,16 @@ func (p *parser) Map(field reflect.Value, tag string, delenv bool) (bool, error)
 }
 
 // parseUint parses an unsigned integer from a string as specific size.
-func parseUint(field reflect.Value, intType, envval string) error {
+func parseUint(field reflect.Value, intType interface{}, envval string) error {
 	var (
 		err error
 		val uint64
 	)
 
-	switch intType {
+	switch intType.(type) {
 	default:
 		val, err = strconv.ParseUint(envval, base10, 0)
-	case typeUINT8:
+	case uint8:
 		// this crap is to support byte and []byte
 		switch len(envval) {
 		case 0:
@@ -338,11 +344,11 @@ func parseUint(field reflect.Value, intType, envval string) error {
 		default:
 			return fmt.Errorf("%w: %s", ErrInvalidByte, envval)
 		}
-	case typeUINT16:
+	case uint16:
 		val, err = strconv.ParseUint(envval, base10, bits16)
-	case typeUINT32:
+	case uint32:
 		val, err = strconv.ParseUint(envval, base10, bits32)
-	case typeUINT64:
+	case uint64:
 		val, err = strconv.ParseUint(envval, base10, bits64)
 	}
 
@@ -356,17 +362,17 @@ func parseUint(field reflect.Value, intType, envval string) error {
 }
 
 // parseInt parses an integer from a string as specific size.
-func parseInt(intType, envval string) (i int64, err error) {
-	switch intType {
+func parseInt(intType interface{}, envval string) (i int64, err error) {
+	switch intType.(type) {
 	default:
 		i, err = strconv.ParseInt(envval, base10, 0)
-	case typeINT8:
+	case int8:
 		i, err = strconv.ParseInt(envval, base10, bits8)
-	case typeINT16:
+	case int16:
 		i, err = strconv.ParseInt(envval, base10, bits16)
-	case typeINT32:
+	case int32:
 		i, err = strconv.ParseInt(envval, base10, bits32)
-	case typeINT64:
+	case int64:
 		i, err = strconv.ParseInt(envval, base10, bits64)
 	}
 

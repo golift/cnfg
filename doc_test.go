@@ -27,7 +27,7 @@ func ExampleENV_Unmarshal_simple() { // nolint: funlen
 
 	// Make a pointer to your struct with some default data.
 	// Maybe this data came from a config file? Using ParseFile()!
-	c := &Config{
+	config := &Config{
 		Debug:    true,
 		Users:    []string{"me", "you", "them"},
 		Interval: nil,
@@ -48,35 +48,35 @@ func ExampleENV_Unmarshal_simple() { // nolint: funlen
 	os.Setenv("APP_SYSTEM_1_SIGNAL_1", "77")
 
 	fmt.Printf("BEFORE => Debug: %v, Interval: %v, Users: %v, Systems: %v\n",
-		c.Debug, c.Interval, c.Users, c.Systems)
+		config.Debug, config.Interval, config.Users, config.Systems)
 
 	// Make a ENV Decoder with special tag and prefix.
 	env := &cnfg.ENV{Tag: "env", Pfx: "APP"}
 
 	// Run Unmarshal to parse the values into your config pointer:
-	ok, err := env.Unmarshal(c)
+	found, err := env.Unmarshal(config)
 	if err != nil {
 		panic(err)
 	}
 
-	// And optionally, do something with the "ok" return value.
+	// And optionally, do something with the "found" return value.
 	// If you wanted to overwrite ALL configs if ANY env variables are present
 	// you could use ok to make and if statement that does that.
-	if ok {
+	if found {
 		fmt.Println("~ Environment variables were parsed into the config!")
 	}
 
 	// If you don't set an env variable for it, it will stay nil.
 	// Same for structs and slices.
-	if c.Interval == nil {
+	if config.Interval == nil {
 		fmt.Printf("You forgot to set an interval!")
 
 		return
 	}
 
-	fmt.Printf("AFTER => Debug: %v, Interval: %v, Users: %v\n", c.Debug, *c.Interval, c.Users)
+	fmt.Printf("AFTER => Debug: %v, Interval: %v, Users: %v\n", config.Debug, *config.Interval, config.Users)
 	// We added some systems, check them!
-	for i, s := range c.Systems {
+	for i, s := range config.Systems {
 		fmt.Printf(" %v: System Name: %v, Signals: %v\n", i, s.Name, s.Signal)
 	}
 	// Output: BEFORE => Debug: true, Interval: <nil>, Users: [me you them], Systems: []
@@ -108,7 +108,7 @@ func ExampleUnmarshalENV() { // nolint: funlen
 
 	// Make a pointer to your struct. It may be empty or contain defaults.
 	// It may contain nested pointers, structs, maps, slices, etc. It all works.
-	c := &Config{}
+	config := &Config{}
 
 	// Okay set some ENV variables. Pretend you did this in bash.
 	// Setting these will overwrite any existing data. If you set a slice that
@@ -130,20 +130,20 @@ func ExampleUnmarshalENV() { // nolint: funlen
 	os.Setenv("APP_SYSTEM_1_SIGNAL", "654321")
 
 	// Maps inside slices! You can nest all you want, but your variable names may get lengthy.
-	fmt.Printf("BEFORE => Users: %v, Systems: %v\n", len(c.Users), len(c.Systems))
+	fmt.Printf("BEFORE => Users: %v, Systems: %v\n", len(config.Users), len(config.Systems))
 	os.Setenv("APP_SYSTEM_1_ION_reactor-1", "overload")
 	os.Setenv("APP_SYSTEM_1_ION_reactor-2", "underload")
 
 	// Run Unmarshal to parse the values into your config pointer.
 	// We ignore "ok" here. You may choose to capture and it do something though.
-	_, err := cnfg.UnmarshalENV(c, "APP")
+	_, err := cnfg.UnmarshalENV(config, "APP")
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("AFTER  => Users: %v\n", c.Users)
+	fmt.Printf("AFTER  => Users: %v\n", config.Users)
 
-	for i, s := range c.Systems {
+	for i, s := range config.Systems {
 		fmt.Printf(" %v: System Name: %v, Signals: %v, Ion: %v\n", i, s.Name, s.Signal, s.Ion)
 	}
 	// Output:

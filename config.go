@@ -40,27 +40,11 @@ type ENV struct {
 
 // Satify goconst.
 const (
-	typeINT     = "int"
-	typeINT8    = "int8"
-	typeINT16   = "int16"
-	typeINT32   = "int32"
-	typeINT64   = "int64"
-	typeUINT    = "uint"
-	typeUINT8   = "uint8"
-	typeUINT16  = "uint16"
-	typeUINT32  = "uint32"
-	typeUINT64  = "uint64"
-	typeString  = "string"
-	typeFloat64 = "float64"
-	typeFloat32 = "float32"
-	typeBool    = "bool"
-	typeError   = "error"
-	typeDur     = "time.Duration"
-	base10      = 10
-	bits8       = 8
-	bits16      = 16
-	bits32      = 32
-	bits64      = 64
+	base10 = 10
+	bits8  = 8
+	bits16 = 16
+	bits32 = 32
+	bits64 = 64
 )
 
 // The following is only used in tests, and perhaps externally.

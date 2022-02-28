@@ -11,7 +11,7 @@ import (
 
 func TestUnmarshalMap(t *testing.T) {
 	t.Parallel()
-	a := assert.New(t)
+	assert := assert.New(t)
 
 	pairs := map[string]string{
 		"FOO": "bar",
@@ -23,21 +23,19 @@ func TestUnmarshalMap(t *testing.T) {
 		Baz string `xml:"baz"`
 	}
 
-	i := mapTester{}
-	ok, err := cnfg.UnmarshalMap(pairs, &i)
+	testConfig := mapTester{}
+	found, err := cnfg.UnmarshalMap(pairs, &testConfig)
+	assert.True(found)
+	assert.Nil(err)
+	assert.EqualValues("bar", testConfig.Foo)
 
-	a.Nil(err)
-	a.True(ok)
-	a.EqualValues("bar", i.Foo)
+	found, err = cnfg.UnmarshalMap(pairs, testConfig)
+	assert.False(found)
+	assert.NotNil(err, "must have an error when attempting unmarshal to non-pointer")
 
-	ok, err = cnfg.UnmarshalMap(pairs, i)
-
-	a.False(ok)
-	a.NotNil(err, "must have an error when attempting unmarshal to non-pointer")
-
-	ok, err = (&cnfg.ENV{}).UnmarshalMap(pairs, &i)
-	a.True(ok)
-	a.Nil(err)
+	found, err = (&cnfg.ENV{}).UnmarshalMap(pairs, &testConfig)
+	assert.True(found)
+	assert.Nil(err)
 }
 
 func ExampleUnmarshalMap() {
@@ -51,7 +49,7 @@ func ExampleUnmarshalMap() {
 	}
 
 	// Create a pointer to unmarshal your map into.
-	i := &myConfig{}
+	testConfig := &myConfig{}
 
 	// Generally you'd use MapEnvPairs() to create a map from a slice of []string.
 	// You can also get your data from any other source, as long as it can be
@@ -66,14 +64,14 @@ func ExampleUnmarshalMap() {
 	pairs["NESTED_SUBSLICE_0"] = "first slice value"
 	pairs["NESTED_SUBMAP_mapKey"] = "first map key value"
 
-	ok, err := cnfg.UnmarshalMap(pairs, i)
+	ok, err := cnfg.UnmarshalMap(pairs, testConfig)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("ok: %v, key: %v, key2: %v\n", ok, i.Key, i.Key2)
-	fmt.Println("map:", i.Nested.SubMap)
-	fmt.Println("slice:", i.Nested.SubSlice)
+	fmt.Printf("ok: %v, key: %v, key2: %v\n", ok, testConfig.Key, testConfig.Key2)
+	fmt.Println("map:", testConfig.Nested.SubMap)
+	fmt.Println("slice:", testConfig.Nested.SubSlice)
 	// Output: ok: true, key: some env value, key2: some other env value
 	// map: map[mapKey:first map key value]
 	// slice: [first slice value]
@@ -100,15 +98,15 @@ func ExampleMapEnvPairs() {
 
 	// This is the magic offered by this method.
 	pairs["TESTAPP_ENVKEY3"] = "add (or overwrite) a third value in code"
-	i := &myConfig{}
+	config := &myConfig{}
 
 	// We have to use &ENV{} to set a custom prefix, and change the struct tag.
-	ok, err := (&cnfg.ENV{Pfx: "TESTAPP", Tag: "env"}).UnmarshalMap(pairs, i)
+	ok, err := (&cnfg.ENV{Pfx: "TESTAPP", Tag: "env"}).UnmarshalMap(pairs, config)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("ok: %v, key: %v, key2: %v, key3: %v\n", ok, i.Key, i.Key2, i.Key3)
+	fmt.Printf("ok: %v, key: %v, key2: %v, key3: %v\n", ok, config.Key, config.Key2, config.Key3)
 	// Unordered Output: TESTAPP_ENVKEY some env value
 	// TESTAPP_ENVKEY2 some other env value
 	// ok: true, key: some env value, key2: some other env value, key3: add (or overwrite) a third value in code
