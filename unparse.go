@@ -12,23 +12,31 @@ import (
 /* This file contains the methods that convert a struct into environment variables. */
 
 type unparser struct {
+	Low bool   // Allow lowercase values in env variable names.
 	Tag string // struct tag to look for on struct members
 }
 
-func (p *unparser) DeconStruct(field reflect.Value, prefix string) (Pairs, error) {
+func (p *unparser) DeconStruct(field reflect.Value, prefix string) (Pairs, error) { //nolint:cyclop
 	output := Pairs{}
 
 	element := field.Type().Elem()
 	for idx := 0; idx < element.NumField(); idx++ { // Loop each struct member
 		tagval := strings.Split(element.Field(idx).Tag.Get(p.Tag), ",")
-		tag := strings.ToUpper(tagval[0]) // like "NAME" or "TIMEOUT"
+		tag := tagval[0]
+
+		if !p.Low {
+			tag = strings.ToUpper(tagval[0]) // like "NAME" or "TIMEOUT"
+		}
 
 		if !field.Elem().Field(idx).CanSet() || tag == "-" {
 			continue
 		}
 
 		if tag == "" && !element.Field(idx).Anonymous {
-			tag = strings.ToUpper(element.Field(idx).Name)
+			tag = element.Field(idx).Name
+			if !p.Low {
+				tag = strings.ToUpper(element.Field(idx).Name)
+			}
 		}
 
 		tag = strings.Trim(strings.Join([]string{prefix, tag}, LevelSeparator), LevelSeparator)

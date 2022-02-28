@@ -15,6 +15,7 @@ import (
    using reflection tags from a map of keys and values. */
 
 type parser struct {
+	Low  bool   // allow lowercase variables?
 	Tag  string // struct tag to look for on struct members
 	Vals Pairs  // pairs of env variables (saved at start)
 }
@@ -27,7 +28,11 @@ func (p *parser) Struct(field reflect.Value, prefix string) (bool, error) {
 	t := field.Type().Elem()
 	for idx := 0; idx < t.NumField(); idx++ { // Loop each struct member
 		tagval := strings.Split(t.Field(idx).Tag.Get(p.Tag), ",")
-		shorttag := strings.ToUpper(tagval[0]) // like "NAME" or "TIMEOUT"
+		shorttag := tagval[0]
+
+		if !p.Low {
+			shorttag = strings.ToUpper(tagval[0]) // like "NAME" or "TIMEOUT"
+		}
 
 		if !field.Elem().Field(idx).CanSet() || shorttag == "-" {
 			continue // This _only_ works with reflection tags.

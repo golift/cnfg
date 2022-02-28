@@ -36,6 +36,7 @@ type ENVMarshaler interface {
 type ENV struct {
 	Tag string // Struct tag name.
 	Pfx string // ENV var prefix.
+	Low bool   // Set this false to avoid capitalizing variables.
 }
 
 // Satify goconst.
