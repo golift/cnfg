@@ -143,7 +143,9 @@ func (p *unparser) Member(field reflect.Value, tag string, omitempty bool) (Pair
 	switch field.Interface().(type) {
 	// Handle each member type appropriately (differently).
 	case error:
-		output.Set(tag, field.Interface().(error).Error())
+		if err, _ := field.Interface().(error); err != nil {
+			output.Set(tag, err.Error())
+		}
 	case string:
 		output.Set(tag, field.String())
 	case uint, uint8, uint16, uint32, uint64:

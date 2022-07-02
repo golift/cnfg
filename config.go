@@ -59,12 +59,13 @@ type Duration struct{ time.Duration }
 // UnmarshalText parses a duration type from a config file. This method works
 // with the Duration type to allow unmarshaling of durations from files and
 // env variables in the same struct. You won't generally call this directly.
-func (d *Duration) UnmarshalText(b []byte) (err error) {
-	d.Duration, err = time.ParseDuration(string(b))
-
+func (d *Duration) UnmarshalText(b []byte) error {
+	dur, err := time.ParseDuration(string(b))
 	if err != nil {
 		return fmt.Errorf("parsing duration '%s': %w", b, err)
 	}
+
+	d.Duration = dur
 
 	return nil
 }

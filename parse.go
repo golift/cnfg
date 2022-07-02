@@ -47,10 +47,10 @@ func (p *parser) Struct(field reflect.Value, prefix string) (bool, error) {
 		}
 
 		tag := strings.Trim(strings.Join([]string{prefix, shorttag}, LevelSeparator), LevelSeparator) // PFX_NAME, PFX_TIMEOUT
-		envval, ok := p.Vals[tag]                                                                     // see if it exists
+		envval, found := p.Vals[tag]                                                                  // see if it exists
 
 		//		log.Print("tag ", tag, " = ", envval)
-		exists, err := p.Anything(field.Elem().Field(idx), tag, envval, ok, delenv)
+		exists, err := p.Anything(field.Elem().Field(idx), tag, envval, found, delenv)
 		if err != nil {
 			return false, err
 		} else if exists {
@@ -64,7 +64,7 @@ func (p *parser) Struct(field reflect.Value, prefix string) (bool, error) {
 //nolint:cyclop
 func (p *parser) Anything(field reflect.Value, tag, envval string, force, delenv bool) (bool, error) {
 	//	log.Println("Anything", envval, tag, field.Kind(), field.Type(), field.Interface())
-	if exists, err := p.Interface(field, tag, envval); err != nil {
+	if exists, err := p.Interface(field, tag, envval, force); err != nil {
 		return false, err
 	} else if exists {
 		return true, nil
@@ -88,11 +88,11 @@ func (p *parser) Anything(field reflect.Value, tag, envval string, force, delenv
 			return false, nil
 		}
 
-		return p.Member(field, tag, envval)
+		return p.Member(field, tag, envval, force)
 	}
 }
 
-func (p *parser) Pointer(field reflect.Value, tag, envval string, delenv bool) (ok bool, err error) {
+func (p *parser) Pointer(field reflect.Value, tag, envval string, delenv bool) (bool, error) {
 	value := reflect.New(field.Type().Elem())
 	if field.Elem().CanAddr() {
 		// if the pointer already has a value, copy it instead of use the new one.
@@ -100,21 +100,21 @@ func (p *parser) Pointer(field reflect.Value, tag, envval string, delenv bool) (
 	}
 
 	// Pass the non-pointer element back into the start.
-	ok, err = p.Anything(value.Elem(), tag, envval, false, delenv)
-	if ok {
+	found, err := p.Anything(value.Elem(), tag, envval, false, delenv)
+	if found {
 		// overwrite the pointer only if something was parsed.
 		field.Set(value)
 	}
 
-	return ok, err
+	return found, err
 }
 
-func (p *parser) Interface(field reflect.Value, tag, envval string) (bool, error) {
+func (p *parser) Interface(field reflect.Value, tag, envval string, force bool) (bool, error) {
 	if !field.CanAddr() || !field.Addr().CanInterface() {
 		return false, nil
 	}
 
-	if envval == "" {
+	if envval == "" && !force {
 		return false, nil
 	}
 
@@ -124,6 +124,10 @@ func (p *parser) Interface(field reflect.Value, tag, envval string) (bool, error
 		}
 
 		return true, nil
+	}
+
+	if envval == "" {
+		return false, nil
 	}
 
 	if v, ok := field.Addr().Interface().(encoding.TextUnmarshaler); ok {
@@ -149,7 +153,7 @@ func (p *parser) Interface(field reflect.Value, tag, envval string) (bool, error
 }
 
 // Member parses non-struct, non-slice struct-member types.
-func (p *parser) Member(field reflect.Value, tag, envval string) (bool, error) { //nolint:cyclop
+func (p *parser) Member(field reflect.Value, tag, envval string, force bool) (bool, error) { //nolint:cyclop
 	var err error
 
 	// Errors cannot be type-switched from reflection for some reason.
@@ -192,9 +196,8 @@ func (p *parser) Member(field reflect.Value, tag, envval string) (bool, error) {
 		val, err = strconv.ParseBool(envval)
 		field.SetBool(val)
 	default:
-		var ok bool
-
-		if ok, err = p.Interface(field, tag, envval); err == nil && !ok {
+		var found bool
+		if found, err = p.Interface(field, tag, envval, force); err == nil && !found {
 			err = fmt.Errorf("%w: '%T' (env value: %s)", ErrUnsupported, fieldType, envval)
 		}
 	}
@@ -206,33 +209,38 @@ func (p *parser) Member(field reflect.Value, tag, envval string) (bool, error) {
 	return true, nil
 }
 
-func (p *parser) Slice(field reflect.Value, tag string, delenv bool) (ok bool, err error) {
+func (p *parser) Slice(field reflect.Value, tag string, delenv bool) (bool, error) {
 	value := field
 	reflect.Copy(value, field)
+
+	var (
+		found bool
+		err   error
+	)
 
 	// slice of bytes works differently than any other slice type.
 	if value.Type().String() == "[]uint8" {
 		envval, exists := p.Vals[tag]
-		ok = exists
+		found = exists
 
 		value.SetBytes([]byte(envval))
 	} else {
-		ok, err = p.SliceValue(value, tag, delenv)
+		found, err = p.SliceValue(value, tag, delenv)
 	}
 
 	if delenv {
 		os.Unsetenv(tag) // delete it if it was requested in the env tag.
 	}
 
-	if ok {
+	if found {
 		field.Set(value) // Overwrite the slice.
 	}
 
-	return ok, err
+	return found, err
 }
 
 func (p *parser) SliceValue(field reflect.Value, tag string, delenv bool) (bool, error) {
-	var ok bool
+	var found bool
 
 	total := field.Len()
 	for idx := 0; idx <= total; idx++ {
@@ -256,7 +264,7 @@ func (p *parser) SliceValue(field reflect.Value, tag string, delenv bool) (bool,
 			continue
 		}
 
-		ok = true
+		found = true
 
 		if idx >= field.Len() {
 			total++ // do one more iteration.
@@ -271,11 +279,11 @@ func (p *parser) SliceValue(field reflect.Value, tag string, delenv bool) (bool,
 		field.Index(idx).Set(value)
 	}
 
-	return ok, nil
+	return found, nil
 }
 
 func (p *parser) Map(field reflect.Value, tag string, delenv bool) (bool, error) {
-	var ok bool
+	var found bool
 
 	vals := p.Vals.Get(tag) // key=val, ... (prefix stripped)
 	if len(vals) < 1 {
@@ -299,7 +307,7 @@ func (p *parser) Map(field reflect.Value, tag string, delenv bool) (bool, error)
 
 		if val == "" {
 			// a blank env value was provided, set the field to nil.
-			ok = true
+			found = true
 
 			field.SetMapIndex(keyval, reflect.Value{})
 
@@ -315,13 +323,13 @@ func (p *parser) Map(field reflect.Value, tag string, delenv bool) (bool, error)
 		}
 
 		if exists {
-			ok = true
+			found = true
 		}
 
 		field.SetMapIndex(keyval, valval)
 	}
 
-	return ok, nil
+	return found, nil
 }
 
 // parseUint parses an unsigned integer from a string as specific size.
@@ -366,23 +374,28 @@ func parseUint(field reflect.Value, intType interface{}, envval string) error {
 }
 
 // parseInt parses an integer from a string as specific size.
-func parseInt(intType interface{}, envval string) (i int64, err error) {
+func parseInt(intType interface{}, envval string) (int64, error) {
+	var (
+		out int64
+		err error
+	)
+
 	switch intType.(type) {
 	default:
-		i, err = strconv.ParseInt(envval, base10, 0)
+		out, err = strconv.ParseInt(envval, base10, 0)
 	case int8:
-		i, err = strconv.ParseInt(envval, base10, bits8)
+		out, err = strconv.ParseInt(envval, base10, bits8)
 	case int16:
-		i, err = strconv.ParseInt(envval, base10, bits16)
+		out, err = strconv.ParseInt(envval, base10, bits16)
 	case int32:
-		i, err = strconv.ParseInt(envval, base10, bits32)
+		out, err = strconv.ParseInt(envval, base10, bits32)
 	case int64:
-		i, err = strconv.ParseInt(envval, base10, bits64)
+		out, err = strconv.ParseInt(envval, base10, bits64)
 	}
 
 	if err != nil {
-		return i, fmt.Errorf("parsing integer: %w", err)
+		return out, fmt.Errorf("parsing integer: %w", err)
 	}
 
-	return i, nil
+	return out, nil
 }

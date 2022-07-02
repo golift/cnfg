@@ -84,7 +84,7 @@ func TestParseInterfaceError(t *testing.T) {
 
 	type F uint64
 
-	ok, err := (&parser{}).Interface(reflect.ValueOf(F(0)), "", "")
+	ok, err := (&parser{}).Interface(reflect.ValueOf(F(0)), "", "", false)
 	assert.False(ok, "unaddressable value must return false")
 	assert.Nil(err, "unaddressable value must return nil")
 }
