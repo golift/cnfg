@@ -114,17 +114,16 @@ func (p *parser) Interface(field reflect.Value, tag, envval string) (bool, error
 		return false, nil
 	}
 
+	if envval == "" {
+		return false, nil
+	}
+
 	if v, ok := field.Addr().Interface().(ENVUnmarshaler); ok {
-		// Custom unmarshaler can proceed even if envval is empty. It may produce new envvals...
 		if err := v.UnmarshalENV(tag, envval); err != nil {
 			return false, fmt.Errorf("UnmarshalENV interface: %w", err)
 		}
 
 		return true, nil
-	}
-
-	if envval == "" {
-		return false, nil
 	}
 
 	if v, ok := field.Addr().Interface().(encoding.TextUnmarshaler); ok {
@@ -196,7 +195,7 @@ func (p *parser) Member(field reflect.Value, tag, envval string) (bool, error) {
 		var ok bool
 
 		if ok, err = p.Interface(field, tag, envval); err == nil && !ok {
-			err = fmt.Errorf("%w: '%T' (env value: %s)", ErrUnsupported, field.Type(), envval)
+			err = fmt.Errorf("%w: '%T' (env value: %s)", ErrUnsupported, fieldType, envval)
 		}
 	}
 
