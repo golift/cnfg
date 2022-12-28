@@ -9,7 +9,7 @@ import (
 )
 
 // Complete working example for ENV.Unmarshal().
-func ExampleENV_Unmarshal_simple() { // nolint: funlen
+func ExampleENV_Unmarshal_simple() {
 	// Systems is used to show an example of how to access nested slices.
 	type System struct {
 		Name   string `env:"name"`
@@ -88,7 +88,7 @@ func ExampleENV_Unmarshal_simple() { // nolint: funlen
 
 // Complete working example for UnmarshalENV(). Use this method when the "xml"
 // struct tag suits your application.
-func ExampleUnmarshalENV() { // nolint: funlen
+func ExampleUnmarshalENV() {
 	// Systems is used to show an example of how to access nested slices.
 	type System struct {
 		Name   string             `xml:"name"`

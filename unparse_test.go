@@ -45,7 +45,6 @@ type marshalTest2 struct {
 }
 
 func marshalTestData() (*MarshalTest, int) {
-	//nolint:goerr113
 	return &MarshalTest{
 		Name:  "my name is golift",                                           // 1
 		Pass:  "supersecret",                                                 // 2

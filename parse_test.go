@@ -1,4 +1,4 @@
-package cnfg //nolint:testpackage
+package cnfg
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ func TestParseByteSlice(t *testing.T) { //nolint:paralleltest
 	assert := assert.New(t)
 
 	type test struct {
-		F []byte `xml:"bytes,delenv"` //nolint:staticcheck
+		F []byte `xml:"bytes,delenv"`
 	}
 
 	t.Setenv("D_BYTES", "byte slice incoming")

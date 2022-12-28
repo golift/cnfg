@@ -12,7 +12,6 @@ import (
 	"golift.io/cnfg"
 )
 
-//nolint:staticcheck
 type testStruct struct {
 	PointerSlice  []*testSubConfig `json:"pslice" xml:"pslice" yaml:"pslice" toml:"pslice"`
 	StructSlice   []testSubConfig  `json:"sslice" xml:"sslice" yaml:"sslice" toml:"sslice"`
@@ -118,7 +117,7 @@ func TestUnmarshalENVerrors(t *testing.T) { //nolint:paralleltest // cannot para
 
 	type tester struct {
 		unexpd map[string]string
-		Works  map[string]string `xml:"works,delenv"` //nolint:staticcheck
+		Works  map[string]string `xml:"works,delenv"`
 		Rad    map[string][]int  `xml:"yup"`
 		Error  error             `xml:"error"`
 	}
@@ -143,7 +142,7 @@ func TestUnmarshalENVerrors(t *testing.T) { //nolint:paralleltest // cannot para
 	assert.Equal("foo2val", config.Works["foo2string"])
 	assert.Equal([]int{128, 129, 130}, config.Rad["server99"])
 	assert.Equal([]int{256}, config.Rad["server100"])
-	assert.Equal(fmt.Errorf("this is an error"), config.Error) // nolint: goerr113
+	assert.Equal(fmt.Errorf("this is an error"), config.Error)
 
 	type tester2 struct {
 		NotBroken  []map[string]string  `xml:"broken"`

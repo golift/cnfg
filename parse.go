@@ -70,7 +70,7 @@ func (p *parser) Anything(field reflect.Value, tag, envval string, force, delenv
 		return true, nil
 	}
 
-	switch field.Kind() { // nolint: exhaustive
+	switch field.Kind() {
 	case reflect.Ptr:
 		return p.Pointer(field, tag, envval, delenv)
 	case reflect.Struct:
@@ -109,6 +109,7 @@ func (p *parser) Pointer(field reflect.Value, tag, envval string, delenv bool) (
 	return found, err
 }
 
+//nolint:cyclop // it's complicated, and probably not worth breaking up.
 func (p *parser) Interface(field reflect.Value, tag, envval string, force bool) (bool, error) {
 	if !field.CanAddr() || !field.Addr().CanInterface() {
 		return false, nil
@@ -158,7 +159,7 @@ func (p *parser) Member(field reflect.Value, tag, envval string, force bool) (bo
 
 	// Errors cannot be type-switched from reflection for some reason.
 	if field.Type().String() == "error" { // lul
-		field.Set(reflect.ValueOf(errors.New(envval))) // nolint: goerr113
+		field.Set(reflect.ValueOf(errors.New(envval))) //nolint: goerr113
 
 		return true, nil
 	}

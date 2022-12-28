@@ -1,4 +1,4 @@
-// Package cnfg provides procedures to parse parse a slew of environment variables
+// Package cnfg provides procedures to parse a slew of environment variables
 // into a struct pointer.
 //
 // Use this package if your app uses a config file and you want to allow users to change
