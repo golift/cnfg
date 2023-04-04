@@ -88,7 +88,7 @@ func (p *unparser) Anything(field reflect.Value, tag string, omitempty bool) (Pa
 	}
 }
 
-func (p *unparser) Interface(field reflect.Value, tag string, omitempty bool) (Pairs, bool, error) {
+func (p *unparser) Interface(field reflect.Value, tag string, _ bool) (Pairs, bool, error) {
 	output := Pairs{}
 
 	if !field.CanAddr() || !field.Addr().CanInterface() {
@@ -137,7 +137,7 @@ func (p *unparser) Interface(field reflect.Value, tag string, omitempty bool) (P
 }
 
 // Member parses non-struct, non-slice struct-member types.
-func (p *unparser) Member(field reflect.Value, tag string, omitempty bool) (Pairs, error) {
+func (p *unparser) Member(field reflect.Value, tag string, _ bool) (Pairs, error) {
 	output := Pairs{}
 
 	switch field.Interface().(type) {
