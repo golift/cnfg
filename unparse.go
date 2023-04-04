@@ -137,10 +137,10 @@ func (p *unparser) Interface(field reflect.Value, tag string, _ bool) (Pairs, bo
 }
 
 // Member parses non-struct, non-slice struct-member types.
-func (p *unparser) Member(field reflect.Value, tag string, _ bool) (Pairs, error) {
+func (p *unparser) Member(field reflect.Value, tag string, _ bool) (Pairs, error) { //nolint:cyclop
 	output := Pairs{}
 
-	switch field.Interface().(type) {
+	switch val := field.Interface().(type) {
 	// Handle each member type appropriately (differently).
 	case error:
 		if err, _ := field.Interface().(error); err != nil {
@@ -148,14 +148,30 @@ func (p *unparser) Member(field reflect.Value, tag string, _ bool) (Pairs, error
 		}
 	case string:
 		output.Set(tag, field.String())
-	case uint, uint8, uint16, uint32, uint64:
-		output.Set(tag, strconv.FormatUint(field.Uint(), base10))
-	case int, int8, int16, int32, int64:
-		output.Set(tag, strconv.FormatInt(field.Int(), base10))
+	case uint:
+		output.Set(tag, strconv.FormatUint(uint64(val), base10))
+	case uint8:
+		output.Set(tag, strconv.FormatUint(uint64(val), base10))
+	case uint16:
+		output.Set(tag, strconv.FormatUint(uint64(val), base10))
+	case uint32:
+		output.Set(tag, strconv.FormatUint(uint64(val), base10))
+	case uint64:
+		output.Set(tag, strconv.FormatUint(val, base10))
+	case int:
+		output.Set(tag, strconv.FormatInt(int64(val), base10))
+	case int8:
+		output.Set(tag, strconv.FormatInt(int64(val), base10))
+	case int16:
+		output.Set(tag, strconv.FormatInt(int64(val), base10))
+	case int32:
+		output.Set(tag, strconv.FormatInt(int64(val), base10))
+	case int64:
+		output.Set(tag, strconv.FormatInt(val, base10))
 	case float64:
-		output.Set(tag, strconv.FormatFloat(field.Float(), 'f', -1, bits64))
+		output.Set(tag, strconv.FormatFloat(val, 'f', -1, bits64))
 	case float32:
-		output.Set(tag, strconv.FormatFloat(field.Float(), 'f', -1, bits32))
+		output.Set(tag, strconv.FormatFloat(float64(val), 'f', -1, bits32))
 	case time.Duration:
 		output.Set(tag, (time.Duration(field.Int()) * time.Nanosecond).String())
 	case bool:
