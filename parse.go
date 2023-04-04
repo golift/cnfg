@@ -158,9 +158,8 @@ func (p *parser) Member(field reflect.Value, tag, envval string, force bool) (bo
 	var err error
 
 	// Errors cannot be type-switched from reflection for some reason.
-	if field.Type().String() == "error" { // lul
+	if field.Type().String() == "error" {
 		field.Set(reflect.ValueOf(errors.New(envval))) //nolint: goerr113
-
 		return true, nil
 	}
 
@@ -197,10 +196,52 @@ func (p *parser) Member(field reflect.Value, tag, envval string, force bool) (bo
 		val, err = strconv.ParseBool(envval)
 		field.SetBool(val)
 	default:
-		var found bool
-		if found, err = p.Interface(field, tag, envval, force); err == nil && !found {
-			err = fmt.Errorf("%w: '%T' (env value: %s)", ErrUnsupported, fieldType, envval)
-		}
+		return p.customMember(field, tag, envval, force)
+	}
+
+	if err != nil {
+		return false, fmt.Errorf("%s: %w", tag, err)
+	}
+
+	return true, nil
+}
+
+func (p *parser) customMember(field reflect.Value, tag, envval string, force bool) (bool, error) { //nolint:cyclop
+	// Check if this type matches an unmarshaller interface.
+	found, err := p.Interface(field, tag, envval, force)
+	if err != nil || found {
+		return found, err
+	}
+
+	switch kind := field.Kind(); kind {
+	// Handle each member type appropriately (differently).
+	case reflect.String:
+		// SetString is a reflect package method to update a struct member by index.
+		field.SetString(envval)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		err = parseUint(field, field.Interface(), envval)
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		var val int64
+
+		val, err = parseInt(field.Interface(), envval)
+		field.SetInt(val)
+	case reflect.Float64:
+		var val float64
+
+		val, err = strconv.ParseFloat(envval, bits64)
+		field.SetFloat(val)
+	case reflect.Float32:
+		var val float64
+
+		val, err = strconv.ParseFloat(envval, bits32)
+		field.SetFloat(val)
+	case reflect.Bool:
+		var val bool
+
+		val, err = strconv.ParseBool(envval)
+		field.SetBool(val)
+	default:
+		return false, fmt.Errorf("%w: type: %T, kind: %v, value: %s", ErrUnsupported, field.Interface(), field.Kind(), envval)
 	}
 
 	if err != nil {
