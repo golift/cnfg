@@ -17,7 +17,7 @@ func TestParseInt(t *testing.T) {
 		i, err := parseInt(t, fmt.Sprintf("%d", t))
 
 		assert.EqualValues(t, i)
-		assert.Nil(err)
+		assert.NoError(err)
 	}
 }
 
@@ -34,7 +34,7 @@ func TestParseByteSlice(t *testing.T) { //nolint:paralleltest
 	ok, err := UnmarshalENV(testStruct, "D")
 
 	assert.True(ok)
-	assert.Nil(err)
+	assert.NoError(err)
 	assert.Equal("byte slice incoming", string(testStruct.F))
 }
 
@@ -54,7 +54,7 @@ func TestParseUint(t *testing.T) {
 		err := parseUint(theField, t, "1")
 
 		assert.EqualValues(1, embeddedInt.F)
-		assert.Nil(err)
+		assert.NoError(err)
 	}
 
 	type test2 struct {

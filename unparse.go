@@ -88,11 +88,12 @@ func (p *unparser) Anything(field reflect.Value, tag string, omitempty bool) (Pa
 	}
 }
 
-func (p *unparser) Interface(field reflect.Value, tag string, _ bool) (Pairs, bool, error) {
+func (p *unparser) Interface(field reflect.Value, tag string, omitempty bool) (Pairs, bool, error) {
 	output := Pairs{}
 
 	if !field.CanAddr() || !field.Addr().CanInterface() {
-		return output, false, nil
+		pairs, err := p.Member(reflect.ValueOf(field.Interface()), tag, omitempty)
+		return pairs, true, err
 	}
 
 	if v, ok := field.Addr().Interface().(ENVMarshaler); ok {
@@ -137,7 +138,7 @@ func (p *unparser) Interface(field reflect.Value, tag string, _ bool) (Pairs, bo
 }
 
 // Member parses non-struct, non-slice struct-member types.
-func (p *unparser) Member(field reflect.Value, tag string, _ bool) (Pairs, error) { //nolint:cyclop
+func (p *unparser) Member(field reflect.Value, tag string, omitempty bool) (Pairs, error) { //nolint:cyclop
 	output := Pairs{}
 
 	switch val := field.Interface().(type) {
@@ -175,7 +176,34 @@ func (p *unparser) Member(field reflect.Value, tag string, _ bool) (Pairs, error
 	case time.Duration:
 		output.Set(tag, (time.Duration(field.Int()) * time.Nanosecond).String())
 	case bool:
-		output.Set(tag, fmt.Sprintf("%v", field.Bool()))
+		output.Set(tag, strconv.FormatBool(field.Bool()))
+	default:
+		return p.kindMember(field, tag, omitempty)
+	}
+
+	return output, nil
+}
+
+func (p *unparser) kindMember(field reflect.Value, tag string, _ bool) (Pairs, error) {
+	output := Pairs{}
+
+	switch field.Kind() {
+	case reflect.String:
+		output.Set(tag, field.String())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		val, _ := field.Interface().(uint64)
+		output.Set(tag, strconv.FormatUint(val, base10))
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		val, _ := field.Interface().(int64)
+		output.Set(tag, strconv.FormatInt(val, base10))
+	case reflect.Float64:
+		val, _ := field.Interface().(float64)
+		output.Set(tag, strconv.FormatFloat(val, 'f', -1, bits64))
+	case reflect.Float32:
+		val, _ := field.Interface().(float32)
+		output.Set(tag, strconv.FormatFloat(float64(val), 'f', -1, bits32))
+	case reflect.Bool:
+		output.Set(tag, strconv.FormatBool(field.Bool()))
 	}
 
 	return output, nil

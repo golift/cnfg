@@ -12,29 +12,30 @@ import (
 )
 
 type MarshalTest struct {
-	Name  string            `xml:"name,omitempty"`
-	Pass  string            `xml:"pass,omitempty"`
-	IP    net.IP            `xml:"ip,omitempty"`
-	Smap  map[string]string `xml:"smap,omitempty"`
-	List  []string          `xml:"list,omitempty"`
-	Byte  []byte            `xml:"byte,omitempty"`
-	Dur   time.Duration     `xml:"dur,omitempty"`
-	Time  time.Time         `xml:"time,omitempty"`
-	Err   error             `xml:"err,omitempty"`
-	Bool  bool              `xml:"bool,omitempty"`
-	Uint  uint8             `xml:"uint,omitempty"`
-	Un16  uint16            `xml:"un16,omitempty"`
-	Un32  uint32            `xml:"un32,omitempty"`
-	Un64  uint64            `xml:"un64,omitempty"`
-	Int   int               `xml:"int,omitempty"`
-	In8   int8              `xml:"in8,omitempty"`
-	In16  int16             `xml:"in16,omitempty"`
-	In32  int32             `xml:"in32,omitempty"`
-	In64  int64             `xml:"in64,omitempty"`
-	Fl32  float32           `xml:"fl32,omitempty"`
-	Fl64  float64           `xml:"fl64,omitempty"`
-	Test2 marshalTest2      `xml:"test2"`
-	Test  *MarshalTest      `xml:"test"`
+	Name  string                 `xml:"name,omitempty"`
+	Pass  string                 `xml:"pass,omitempty"`
+	IP    net.IP                 `xml:"ip,omitempty"`
+	Smap  map[string]string      `xml:"smap,omitempty"`
+	Imap  map[string]interface{} `xml:"imap,omitempty"`
+	List  []string               `xml:"list,omitempty"`
+	Byte  []byte                 `xml:"byte,omitempty"`
+	Dur   time.Duration          `xml:"dur,omitempty"`
+	Time  time.Time              `xml:"time,omitempty"`
+	Err   error                  `xml:"err,omitempty"`
+	Bool  bool                   `xml:"bool,omitempty"`
+	Uint  uint8                  `xml:"uint,omitempty"`
+	Un16  uint16                 `xml:"un16,omitempty"`
+	Un32  uint32                 `xml:"un32,omitempty"`
+	Un64  uint64                 `xml:"un64,omitempty"`
+	Int   int                    `xml:"int,omitempty"`
+	In8   int8                   `xml:"in8,omitempty"`
+	In16  int16                  `xml:"in16,omitempty"`
+	In32  int32                  `xml:"in32,omitempty"`
+	In64  int64                  `xml:"in64,omitempty"`
+	Fl32  float32                `xml:"fl32,omitempty"`
+	Fl64  float64                `xml:"fl64,omitempty"`
+	Test2 marshalTest2           `xml:"test2"`
+	Test  *MarshalTest           `xml:"test"`
 }
 
 type marshalTest2 struct {
@@ -70,8 +71,13 @@ func marshalTestData() (*MarshalTest, int) {
 		Test: &MarshalTest{
 			Name: "subtest",                                                    // 24
 			Err:  fmt.Errorf("this long error is here 2 line up the comments"), // 25
-		}, // + 3 more from marshalTest2.Name2. That puts the total var count at 28
-	}, 28 // set the count here.
+		}, Imap: map[string]interface{}{
+			"orange":  "sunset",  // 26
+			"pink":    "sunrise", // 27
+			"counter": 8967,      // 28
+			"floater": 3.1415926, // 29
+		}, // + 3 more from marshalTest2.Name2. That puts the total var count at 32.
+	}, 32 // set the count here.
 }
 
 func TestDeconStruct(t *testing.T) {
@@ -87,6 +93,10 @@ func TestDeconStruct(t *testing.T) {
 	assert.Equal(data.IP.String(), pairs["PFX_IP"])
 	assert.Equal(data.Smap["blue"], pairs["PFX_SMAP_blue"])
 	assert.Equal(data.Smap["red"], pairs["PFX_SMAP_red"])
+	assert.Equal(data.Imap["orange"], pairs["PFX_IMAP_orange"])
+	assert.Equal(data.Imap["pink"], pairs["PFX_IMAP_pink"])
+	assert.Equal(fmt.Sprint(data.Imap["counter"]), pairs["PFX_IMAP_counter"])
+	assert.Equal(fmt.Sprint(data.Imap["floater"]), pairs["PFX_IMAP_floater"])
 	assert.Equal(data.List[0], pairs["PFX_LIST_0"])
 	assert.Equal(data.List[1], pairs["PFX_LIST_1"])
 	assert.Equal(string(data.Byte), pairs["PFX_BYTE"])
