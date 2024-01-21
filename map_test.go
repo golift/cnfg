@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"golift.io/cnfg"
 )
 
@@ -27,18 +26,18 @@ func TestUnmarshalMap(t *testing.T) {
 	config := mapTester{}
 	worked, err := cnfg.UnmarshalMap(pairs, &config)
 
-	require.NoError(t, err)
+	assert.Nil(err)
 	assert.True(worked)
 	assert.EqualValues("bar", config.Foo)
 
 	worked, err = cnfg.UnmarshalMap(pairs, config)
 
 	assert.False(worked)
-	require.Error(t, err, "must have an error when attempting unmarshal to non-pointer")
+	assert.NotNil(err, "must have an error when attempting unmarshal to non-pointer")
 
 	worked, err = (&cnfg.ENV{}).UnmarshalMap(pairs, &config)
 	assert.True(worked)
-	require.NoError(t, err)
+	assert.Nil(err)
 }
 
 func ExampleUnmarshalMap() {
