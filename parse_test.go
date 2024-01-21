@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestParseInt(t *testing.T) {
@@ -14,11 +13,11 @@ func TestParseInt(t *testing.T) {
 
 	assert := assert.New(t)
 
-	for _, val := range []interface{}{int(0), int8(8), int16(16), int32(32), int64(64)} {
-		i, err := parseInt(val, fmt.Sprintf("%d", val))
+	for _, t := range []interface{}{int(0), int8(8), int16(16), int32(32), int64(64)} {
+		i, err := parseInt(t, fmt.Sprintf("%d", t))
 
-		require.NoError(t, err)
 		assert.EqualValues(t, i)
+		assert.NoError(err)
 	}
 }
 
@@ -35,7 +34,7 @@ func TestParseByteSlice(t *testing.T) { //nolint:paralleltest
 	ok, err := UnmarshalENV(testStruct, "D")
 
 	assert.True(ok)
-	require.NoError(t, err)
+	assert.NoError(err)
 	assert.Equal("byte slice incoming", string(testStruct.F))
 }
 
@@ -51,10 +50,11 @@ func TestParseUint(t *testing.T) {
 	embeddedInt := &test{}
 	theField := reflect.ValueOf(embeddedInt).Elem().Field(0)
 
-	for _, val := range []interface{}{uint(0), uint16(16), uint32(32), uint64(64)} {
-		err := parseUint(theField, val, "1")
-		require.NoError(t, err)
+	for _, t := range []interface{}{uint(0), uint16(16), uint32(32), uint64(64)} {
+		err := parseUint(theField, t, "1")
+
 		assert.EqualValues(1, embeddedInt.F)
+		assert.NoError(err)
 	}
 
 	type test2 struct {
@@ -65,14 +65,14 @@ func TestParseUint(t *testing.T) {
 	theField = reflect.ValueOf(testStruct).Elem().Field(0)
 
 	err := parseUint(theField, uint8(0), "11")
-	require.Error(t, err, "must return an error when more than one byte is provided")
+	assert.NotNil(err, "must return an error when more than one byte is provided")
 
 	err = parseUint(theField, uint8(0), "f")
-	require.NoError(t, err, "must not return an error when only one byte is provided")
+	assert.Nil(err, "must not return an error when only one byte is provided")
 	assert.Equal(byte('f'), testStruct.F)
 
 	err = parseUint(theField, uint8(0), "")
-	require.NoError(t, err, "must not return an error when only no bytes are provided")
+	assert.Nil(err, "must not return an error when only no bytes are provided")
 	assert.Equal(uint8(0), testStruct.F)
 }
 
@@ -85,6 +85,6 @@ func TestParseInterfaceError(t *testing.T) {
 	type F uint64
 
 	ok, err := (&parser{}).Interface(reflect.ValueOf(F(0)), "", "", false)
-	require.NoError(t, err, "unaddressable value must return nil")
 	assert.False(ok, "unaddressable value must return false")
+	assert.Nil(err, "unaddressable value must return nil")
 }
