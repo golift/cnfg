@@ -22,10 +22,9 @@ linters:
     - structcheck
     - deadcode
     - ifshort
-    - rowserrcheck
-    - sqlclosecheck
-    - wastedassign
     - exhaustive
+    - depguard
+    - tagalign
 
 run:
   timeout: 3m
