@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golift.io/cnfg"
 )
 
@@ -71,7 +72,7 @@ func TestUnmarshalText(t *testing.T) {
 	d := cnfg.Duration{Duration: time.Minute + time.Second}
 	b, err := d.MarshalText()
 
-	assert.Nil(t, err, "this method must not return an error")
+	require.NoError(t, err, "this method must not return an error")
 	assert.Equal(t, []byte("1m1s"), b)
 }
 
@@ -81,7 +82,7 @@ func TestUnmarshalJSON(t *testing.T) {
 	d := cnfg.Duration{Duration: time.Minute + time.Hour}
 	b, err := d.MarshalJSON()
 
-	assert.Nil(t, err, "this method must not return an error")
+	require.NoError(t, err, "this method must not return an error")
 	assert.Equal(t, []byte(`"1h1m0s"`), b)
 }
 
