@@ -71,9 +71,11 @@ func marshalTestData() (*MarshalTest, int) {
 		Test: &MarshalTest{
 			Name: "subtest",                                                    // 24
 			Err:  fmt.Errorf("this long error is here 2 line up the comments"), // 25
-		},
-		Imap: map[string]interface{}{"orange": "sunset", // 26
-			"pink": "sunrise", "counter": 8967, "floater": 3.1415926, // 27, 28, 29
+		}, Imap: map[string]interface{}{
+			"orange":  "sunset",  // 26
+			"pink":    "sunrise", // 27
+			"counter": 8967,      // 28
+			"floater": 3.1415926, // 29
 		}, // + 3 more from marshalTest2.Name2. That puts the total var count at 32.
 	}, 32 // set the count here.
 }

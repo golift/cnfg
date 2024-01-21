@@ -176,7 +176,7 @@ func (p *unparser) Member(field reflect.Value, tag string, omitempty bool) (Pair
 	case time.Duration:
 		output.Set(tag, (time.Duration(field.Int()) * time.Nanosecond).String())
 	case bool:
-		output.Set(tag, fmt.Sprintf("%v", field.Bool()))
+		output.Set(tag, strconv.FormatBool(field.Bool()))
 	default:
 		return p.kindMember(field, tag, omitempty)
 	}
@@ -184,7 +184,7 @@ func (p *unparser) Member(field reflect.Value, tag string, omitempty bool) (Pair
 	return output, nil
 }
 
-func (p *unparser) kindMember(field reflect.Value, tag string, omitempty bool) (Pairs, error) { //nolint:cyclop
+func (p *unparser) kindMember(field reflect.Value, tag string, _ bool) (Pairs, error) {
 	output := Pairs{}
 
 	switch field.Kind() {
@@ -195,7 +195,7 @@ func (p *unparser) kindMember(field reflect.Value, tag string, omitempty bool) (
 		output.Set(tag, strconv.FormatUint(val, base10))
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		val, _ := field.Interface().(int64)
-		output.Set(tag, strconv.FormatInt(int64(val), base10))
+		output.Set(tag, strconv.FormatInt(val, base10))
 	case reflect.Float64:
 		val, _ := field.Interface().(float64)
 		output.Set(tag, strconv.FormatFloat(val, 'f', -1, bits64))
@@ -203,8 +203,7 @@ func (p *unparser) kindMember(field reflect.Value, tag string, omitempty bool) (
 		val, _ := field.Interface().(float32)
 		output.Set(tag, strconv.FormatFloat(float64(val), 'f', -1, bits32))
 	case reflect.Bool:
-		output.Set(tag, fmt.Sprintf("%v", field.Bool()))
-
+		output.Set(tag, strconv.FormatBool(field.Bool()))
 	}
 
 	return output, nil
