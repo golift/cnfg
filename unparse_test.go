@@ -3,13 +3,17 @@ package cnfg_test
 import (
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golift.io/cnfg"
 )
+
+const base10 = 10
 
 type MarshalTest struct {
 	Name  string                 `xml:"name,omitempty"`
@@ -87,7 +91,7 @@ func TestDeconStruct(t *testing.T) {
 	data, count := marshalTestData()
 	pairs, err := cnfg.MarshalENV(data, "PFX")
 
-	assert.Nil(err)
+	require.NoError(t, err)
 	assert.Equal(data.Name, pairs["PFX_NAME"])
 	assert.Equal(data.Pass, pairs["PFX_PASS"])
 	assert.Equal(data.IP.String(), pairs["PFX_IP"])
@@ -100,16 +104,16 @@ func TestDeconStruct(t *testing.T) {
 	assert.Equal(data.List[0], pairs["PFX_LIST_0"])
 	assert.Equal(data.List[1], pairs["PFX_LIST_1"])
 	assert.Equal(string(data.Byte), pairs["PFX_BYTE"])
-	assert.Equal(fmt.Sprintf("%d", data.Uint), pairs["PFX_UINT"])
-	assert.Equal(fmt.Sprintf("%d", data.Un16), pairs["PFX_UN16"])
-	assert.Equal(fmt.Sprintf("%d", data.Un32), pairs["PFX_UN32"])
-	assert.Equal(fmt.Sprintf("%d", data.Un64), pairs["PFX_UN64"])
+	assert.Equal(strconv.FormatUint(uint64(data.Uint), base10), pairs["PFX_UINT"])
+	assert.Equal(strconv.FormatUint(uint64(data.Un16), base10), pairs["PFX_UN16"])
+	assert.Equal(strconv.FormatUint(uint64(data.Un32), base10), pairs["PFX_UN32"])
+	assert.Equal(strconv.FormatUint(data.Un64, base10), pairs["PFX_UN64"])
 	assert.Equal(data.Dur.String(), pairs["PFX_DUR"])
-	assert.Equal(fmt.Sprintf("%d", data.Int), pairs["PFX_INT"])
-	assert.Equal(fmt.Sprintf("%d", data.In8), pairs["PFX_IN8"])
-	assert.Equal(fmt.Sprintf("%d", data.In16), pairs["PFX_IN16"])
-	assert.Equal(fmt.Sprintf("%d", data.In32), pairs["PFX_IN32"])
-	assert.Equal(fmt.Sprintf("%d", data.In64), pairs["PFX_IN64"])
+	assert.Equal(strconv.FormatInt(int64(data.Int), base10), pairs["PFX_INT"])
+	assert.Equal(strconv.FormatInt(int64(data.In8), base10), pairs["PFX_IN8"])
+	assert.Equal(strconv.FormatInt(int64(data.In16), base10), pairs["PFX_IN16"])
+	assert.Equal(strconv.FormatInt(int64(data.In32), base10), pairs["PFX_IN32"])
+	assert.Equal(strconv.FormatInt(data.In64, base10), pairs["PFX_IN64"])
 	assert.Equal("true", pairs["PFX_BOOL"])
 	assert.Equal(data.Test2.MarshalTest.Name, pairs["PFX_TEST2_NAME"])
 	assert.Equal(data.Test2.Name, pairs["PFX_TEST2_NAME"])
@@ -117,7 +121,7 @@ func TestDeconStruct(t *testing.T) {
 	assert.Equal("64.64", pairs["PFX_FL64"])
 	assert.Equal(data.Test.Name, pairs["PFX_TEST_NAME"])
 	assert.Equal(data.Test.Err.Error(), pairs["PFX_TEST_ERR"])
-	assert.Equal(count, len(pairs),
+	assert.Len(pairs, count,
 		fmt.Sprintf("%d variables are created in marshalTestData, update as more tests are added.", count))
 
 	for _, v := range pairs.Quoted() {
