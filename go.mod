@@ -3,7 +3,7 @@ module golift.io/cnfg
 go 1.19
 
 // for tests.
-require github.com/stretchr/testify v1.9.0
+require github.com/stretchr/testify v1.11.1
 
 // testify imports these.
 require (
