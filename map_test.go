@@ -29,7 +29,7 @@ func TestUnmarshalMap(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.True(worked)
-	assert.EqualValues("bar", config.Foo)
+	assert.Equal("bar", config.Foo)
 
 	worked, err = cnfg.UnmarshalMap(pairs, config)
 
@@ -89,8 +89,8 @@ func ExampleMapEnvPairs() {
 		Key3 string `env:"envkey3"`
 	}
 
-	os.Setenv("TESTAPP_ENVKEY", "some env value")
-	os.Setenv("TESTAPP_ENVKEY2", "some other env value")
+	_ = os.Setenv("TESTAPP_ENVKEY", "some env value")
+	_ = os.Setenv("TESTAPP_ENVKEY2", "some other env value")
 
 	// Create pairs from the current environment.
 	// Only consider environment variables that begin with "TESTAPP"

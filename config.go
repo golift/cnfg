@@ -71,17 +71,17 @@ func (d *Duration) UnmarshalText(b []byte) error {
 }
 
 // MarshalText returns the string representation of a Duration. ie. 1m32s.
-func (d Duration) MarshalText() ([]byte, error) {
+func (d *Duration) MarshalText() ([]byte, error) {
 	return []byte(d.Duration.String()), nil
 }
 
 // MarshalJSON returns the string representation of a Duration for JSON. ie. "1m32s".
-func (d Duration) MarshalJSON() ([]byte, error) {
+func (d *Duration) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + d.Duration.String() + `"`), nil
 }
 
 // String returns a Duration as string without trailing zero units.
-func (d Duration) String() string {
+func (d *Duration) String() string {
 	dur := d.Duration.String()
 	if len(dur) > 3 && dur[len(dur)-3:] == "m0s" {
 		dur = dur[:len(dur)-2]

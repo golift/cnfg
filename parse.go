@@ -81,7 +81,7 @@ func (p *parser) Anything(field reflect.Value, tag, envval string, force, delenv
 		return p.Map(field, tag, delenv)
 	default:
 		if delenv {
-			os.Unsetenv(tag) // delete it if it was requested in the env tag.
+			_ = os.Unsetenv(tag) // delete it if it was requested in the env tag.
 		}
 
 		if !force && envval == "" {
@@ -159,7 +159,8 @@ func (p *parser) Member(field reflect.Value, tag, envval string, force bool) (bo
 
 	// Errors cannot be type-switched from reflection for some reason.
 	if field.Type().String() == "error" {
-		field.Set(reflect.ValueOf(errors.New(envval))) //nolint: goerr113
+		field.Set(reflect.ValueOf(errors.New(envval))) //nolint:err113
+
 		return true, nil
 	}
 
@@ -271,7 +272,7 @@ func (p *parser) Slice(field reflect.Value, tag string, delenv bool) (bool, erro
 	}
 
 	if delenv {
-		os.Unsetenv(tag) // delete it if it was requested in the env tag.
+		_ = os.Unsetenv(tag) // delete it if it was requested in the env tag.
 	}
 
 	if found {
@@ -290,7 +291,7 @@ func (p *parser) SliceValue(field reflect.Value, tag string, delenv bool) (bool,
 		envval, exists := p.Vals[ntag]
 
 		if delenv {
-			os.Unsetenv(ntag) // delete it if it was requested in the env tag.
+			_ = os.Unsetenv(ntag) // delete it if it was requested in the env tag.
 		}
 
 		// Start with a blank value for this item
@@ -338,7 +339,7 @@ func (p *parser) Map(field reflect.Value, tag string, delenv bool) (bool, error)
 
 	for key, val := range vals {
 		if delenv {
-			os.Unsetenv(key)
+			_ = os.Unsetenv(key)
 		}
 
 		// Maps have 2 types. The index and the value. First, parse the index into its type.
@@ -375,7 +376,7 @@ func (p *parser) Map(field reflect.Value, tag string, delenv bool) (bool, error)
 }
 
 // parseUint parses an unsigned integer from a string as specific size.
-func parseUint(field reflect.Value, intType interface{}, envval string) error {
+func parseUint(field reflect.Value, intType any, envval string) error {
 	var (
 		err error
 		val uint64
@@ -416,7 +417,7 @@ func parseUint(field reflect.Value, intType interface{}, envval string) error {
 }
 
 // parseInt parses an integer from a string as specific size.
-func parseInt(intType interface{}, envval string) (int64, error) {
+func parseInt(intType any, envval string) (int64, error) {
 	var (
 		out int64
 		err error

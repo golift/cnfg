@@ -35,17 +35,17 @@ func ExampleENV_Unmarshal_simple() {
 	}
 
 	// Okay set some ENV variables. Pretend you did this in bash.
-	os.Setenv("APP_DEBUG", "false")   // turn off debug
-	os.Setenv("APP_USER_1", "dad")    // replace "you" with "dad"
-	os.Setenv("APP_USER_3", "mom")    // add "mom"
-	os.Setenv("APP_INTERVAL", "7m1s") // don't forget the interval!!
+	_ = os.Setenv("APP_DEBUG", "false")   // turn off debug
+	_ = os.Setenv("APP_USER_1", "dad")    // replace "you" with "dad"
+	_ = os.Setenv("APP_USER_3", "mom")    // add "mom"
+	_ = os.Setenv("APP_INTERVAL", "7m1s") // don't forget the interval!!
 
 	// This adds (creates) systems and signals in sub-slices.
-	os.Setenv("APP_SYSTEM_0_NAME", "SysWon")
-	os.Setenv("APP_SYSTEM_1_NAME", "SysToo")
-	os.Setenv("APP_SYSTEM_1_SIGNAL_0", "12")
+	_ = os.Setenv("APP_SYSTEM_0_NAME", "SysWon")
+	_ = os.Setenv("APP_SYSTEM_1_NAME", "SysToo")
+	_ = os.Setenv("APP_SYSTEM_1_SIGNAL_0", "12")
 	// You can add as many as you like, as long as they are in numerical order.
-	os.Setenv("APP_SYSTEM_1_SIGNAL_1", "77")
+	_ = os.Setenv("APP_SYSTEM_1_SIGNAL_1", "77")
 
 	fmt.Printf("BEFORE => Debug: %v, Interval: %v, Users: %v, Systems: %v\n",
 		config.Debug, config.Interval, config.Users, config.Systems)
@@ -115,24 +115,25 @@ func ExampleUnmarshalENV() {
 	// does not exist, it has to be the _following_ index number. In other words,
 	// if your slice is empty, setting APP_USER_1_NAME wont work, you have to start
 	// with 0. If your slice len is 2, you can append by setting APP_USER_2_NAME
-	os.Setenv("APP_USER_0_NAME", "Tim")
-	os.Setenv("APP_USER_0_LEVEL_0", "1")
-	os.Setenv("APP_USER_0_LEVEL_1", "13")
-	os.Setenv("APP_USER_1_NAME", "Jon")
-	os.Setenv("APP_USER_1_LEVEL_0", "1")
+	_ = os.Setenv("APP_USER_0_NAME", "Tim")
+	_ = os.Setenv("APP_USER_0_LEVEL_0", "1")
+	_ = os.Setenv("APP_USER_0_LEVEL_1", "13")
+	_ = os.Setenv("APP_USER_1_NAME", "Jon")
+	_ = os.Setenv("APP_USER_1_LEVEL_0", "1")
 
 	// This adds (creates) systems and signals in sub-slices.
-	os.Setenv("APP_SYSTEM_0_NAME", "SysWon")
-	os.Setenv("APP_SYSTEM_1_NAME", "SysToo")
+	_ = os.Setenv("APP_SYSTEM_0_NAME", "SysWon")
+	_ = os.Setenv("APP_SYSTEM_1_NAME", "SysToo")
 	// With []byte you can only pass a string, and it's converted.
 	// You cannot access a byte member directly. Do you need to? Let me know!
-	os.Setenv("APP_SYSTEM_0_SIGNAL", "123456")
-	os.Setenv("APP_SYSTEM_1_SIGNAL", "654321")
+	_ = os.Setenv("APP_SYSTEM_0_SIGNAL", "123456")
+	_ = os.Setenv("APP_SYSTEM_1_SIGNAL", "654321")
 
 	// Maps inside slices! You can nest all you want, but your variable names may get lengthy.
 	fmt.Printf("BEFORE => Users: %v, Systems: %v\n", len(config.Users), len(config.Systems))
-	os.Setenv("APP_SYSTEM_1_ION_reactor-1", "overload")
-	os.Setenv("APP_SYSTEM_1_ION_reactor-2", "underload")
+
+	_ = os.Setenv("APP_SYSTEM_1_ION_reactor-1", "overload")
+	_ = os.Setenv("APP_SYSTEM_1_ION_reactor-2", "underload")
 
 	// Run Unmarshal to parse the values into your config pointer.
 	// We ignore "ok" here. You may choose to capture and it do something though.

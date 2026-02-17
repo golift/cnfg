@@ -93,6 +93,7 @@ func (p *unparser) Interface(field reflect.Value, tag string, omitempty bool) (P
 
 	if !field.CanAddr() || !field.Addr().CanInterface() {
 		pairs, err := p.Member(reflect.ValueOf(field.Interface()), tag, omitempty)
+
 		return pairs, true, err
 	}
 

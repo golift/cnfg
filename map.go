@@ -13,10 +13,10 @@ const pairSize = 2
 
 // Get allows getting only specific env variables by prefix.
 // The prefix is trimmed before returning.
-func (p *Pairs) Get(prefix string) Pairs {
+func (p Pairs) Get(prefix string) Pairs {
 	mapPairs := make(Pairs)
 
-	for k, v := range *p {
+	for k, v := range p {
 		if strings.HasPrefix(k, prefix) {
 			mapPairs[strings.SplitN(strings.TrimPrefix(k, prefix+LevelSeparator), LevelSeparator, pairSize)[0]] = v
 		}
@@ -41,7 +41,7 @@ func (p Pairs) Merge(pairs Pairs) {
 // were environment variables. Useful for testing, or unmarshaling values
 // from places other than environment variables.
 // This version of UnmarshalMap assumes default tag ("xml") and no prefix: "".
-func UnmarshalMap(pairs map[string]string, i interface{}) (bool, error) {
+func UnmarshalMap(pairs map[string]string, i any) (bool, error) {
 	return (&ENV{Tag: ENVTag}).UnmarshalMap(pairs, i)
 }
 
@@ -49,7 +49,7 @@ func UnmarshalMap(pairs map[string]string, i interface{}) (bool, error) {
 // were environment variables. Useful for testing, or unmarshaling values
 // from places other than environment variables.
 // Use this version of UnmarshalMap if you need to change the tag or prefix.
-func (e *ENV) UnmarshalMap(pairs map[string]string, i interface{}) (bool, error) {
+func (e *ENV) UnmarshalMap(pairs map[string]string, i any) (bool, error) {
 	value := reflect.ValueOf(i)
 	if value.Kind() != reflect.Ptr || value.Elem().Kind() != reflect.Struct {
 		return false, ErrInvalidInterface

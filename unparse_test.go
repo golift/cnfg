@@ -1,6 +1,7 @@
 package cnfg_test
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -16,37 +17,38 @@ import (
 const base10 = 10
 
 type MarshalTest struct {
-	Name  string                 `xml:"name,omitempty"`
-	Pass  string                 `xml:"pass,omitempty"`
-	IP    net.IP                 `xml:"ip,omitempty"`
-	Smap  map[string]string      `xml:"smap,omitempty"`
-	Imap  map[string]interface{} `xml:"imap,omitempty"`
-	List  []string               `xml:"list,omitempty"`
-	Byte  []byte                 `xml:"byte,omitempty"`
-	Dur   time.Duration          `xml:"dur,omitempty"`
-	Time  time.Time              `xml:"time,omitempty"`
-	Err   error                  `xml:"err,omitempty"`
-	Bool  bool                   `xml:"bool,omitempty"`
-	Uint  uint8                  `xml:"uint,omitempty"`
-	Un16  uint16                 `xml:"un16,omitempty"`
-	Un32  uint32                 `xml:"un32,omitempty"`
-	Un64  uint64                 `xml:"un64,omitempty"`
-	Int   int                    `xml:"int,omitempty"`
-	In8   int8                   `xml:"in8,omitempty"`
-	In16  int16                  `xml:"in16,omitempty"`
-	In32  int32                  `xml:"in32,omitempty"`
-	In64  int64                  `xml:"in64,omitempty"`
-	Fl32  float32                `xml:"fl32,omitempty"`
-	Fl64  float64                `xml:"fl64,omitempty"`
-	Test2 marshalTest2           `xml:"test2"`
-	Test  *MarshalTest           `xml:"test"`
+	Name  string            `xml:"name,omitempty"`
+	Pass  string            `xml:"pass,omitempty"`
+	IP    net.IP            `xml:"ip,omitempty"`
+	Smap  map[string]string `xml:"smap,omitempty"`
+	Imap  map[string]any    `xml:"imap,omitempty"`
+	List  []string          `xml:"list,omitempty"`
+	Byte  []byte            `xml:"byte,omitempty"`
+	Dur   time.Duration     `xml:"dur,omitempty"`
+	Time  time.Time         `xml:"time,omitempty"`
+	Err   error             `xml:"err,omitempty"`
+	Bool  bool              `xml:"bool,omitempty"`
+	Uint  uint8             `xml:"uint,omitempty"`
+	Un16  uint16            `xml:"un16,omitempty"`
+	Un32  uint32            `xml:"un32,omitempty"`
+	Un64  uint64            `xml:"un64,omitempty"`
+	Int   int               `xml:"int,omitempty"`
+	In8   int8              `xml:"in8,omitempty"`
+	In16  int16             `xml:"in16,omitempty"`
+	In32  int32             `xml:"in32,omitempty"`
+	In64  int64             `xml:"in64,omitempty"`
+	Fl32  float32           `xml:"fl32,omitempty"`
+	Fl64  float64           `xml:"fl64,omitempty"`
+	Test2 marshalTest2      `xml:"test2"`
+	Test  *MarshalTest      `xml:"test"`
 }
 
 type marshalTest2 struct {
+	*MarshalTest // anonymous struct memebrs do not have their names exposed.
+
 	// not setting Name2 creates empty variables (no omitempty)
-	Name2        string `xml:""` // non-anonymous struct members will use their name if no struct tag name.
-	Ignore       string `xml:"-"`
-	*MarshalTest        // anonymous struct memebrs do not have their names exposed.
+	Name2  string `xml:""` // non-anonymous struct members will use their name if no struct tag name.
+	Ignore string `xml:"-"`
 }
 
 func marshalTestData() (*MarshalTest, int) {
@@ -73,9 +75,9 @@ func marshalTestData() (*MarshalTest, int) {
 		Fl64:  64.64,                                                         // 22
 		Test2: marshalTest2{MarshalTest: &MarshalTest{Name: "supersubname"}}, // 23
 		Test: &MarshalTest{
-			Name: "subtest",                                                    // 24
-			Err:  fmt.Errorf("this long error is here 2 line up the comments"), // 25
-		}, Imap: map[string]interface{}{
+			Name: "subtest",                                                  // 24
+			Err:  errors.New("this error is here to line up the comments->"), // 25
+		}, Imap: map[string]any{
 			"orange":  "sunset",  // 26
 			"pink":    "sunrise", // 27
 			"counter": 8967,      // 28
@@ -122,7 +124,7 @@ func TestDeconStruct(t *testing.T) {
 	assert.Equal(data.Test.Name, pairs["PFX_TEST_NAME"])
 	assert.Equal(data.Test.Err.Error(), pairs["PFX_TEST_ERR"])
 	assert.Len(pairs, count,
-		fmt.Sprintf("%d variables are created in marshalTestData, update as more tests are added.", count))
+		"%d variables are created in marshalTestData, update as more tests are added.", count)
 
 	for _, v := range pairs.Quoted() {
 		// fmt.Println(v)

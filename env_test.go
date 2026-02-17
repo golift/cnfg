@@ -1,7 +1,7 @@
 package cnfg_test
 
 import (
-	"fmt"
+	"errors"
 	"net"
 	"net/url"
 	"os"
@@ -14,22 +14,22 @@ import (
 )
 
 type testStruct struct {
-	PointerSlice  []*testSubConfig `json:"pslice" xml:"pslice" yaml:"pslice" toml:"pslice"`
-	StructSlice   []testSubConfig  `json:"sslice" xml:"sslice" yaml:"sslice" toml:"sslice"`
-	Struct        testSubConfig    `json:"struct" xml:"struct" yaml:"struct" toml:"struct"`
-	PointerStruct *testSubConfig   `json:"pstruct" xml:"pstruct" yaml:"pstruct" toml:"pstruct"`
+	PointerSlice  []*testSubConfig `json:"pslice"  toml:"pslice"  xml:"pslice"  yaml:"pslice"`
+	StructSlice   []testSubConfig  `json:"sslice"  toml:"sslice"  xml:"sslice"  yaml:"sslice"`
+	Struct        testSubConfig    `json:"struct"  toml:"struct"  xml:"struct"  yaml:"struct"`
+	PointerStruct *testSubConfig   `json:"pstruct" toml:"pstruct" xml:"pstruct" yaml:"pstruct"`
 	// These dont get targeted during unmarhsal (not in the files).
-	PointerSlice2  []*testSubConfig `json:"pslice2" xml:"pslice2,delenv" yaml:"pslice2" toml:"pslice2"`
-	StructSlice2   []testSubConfig  `json:"sslice2" xml:"sslice2" yaml:"sslice2" toml:"sslice2"`
-	Struct2        testSubConfig    `json:"struct2" xml:"struct2" yaml:"struct2" toml:"struct2"`
-	PointerStruct2 *testSubConfig   `json:"pstruct2" xml:"pstruct2" yaml:"pstruct2" toml:"pstruct2"`
+	PointerSlice2  []*testSubConfig `json:"pslice2"  toml:"pslice2"  xml:"pslice2,delenv" yaml:"pslice2"`
+	StructSlice2   []testSubConfig  `json:"sslice2"  toml:"sslice2"  xml:"sslice2"        yaml:"sslice2"`
+	Struct2        testSubConfig    `json:"struct2"  toml:"struct2"  xml:"struct2"        yaml:"struct2"`
+	PointerStruct2 *testSubConfig   `json:"pstruct2" toml:"pstruct2" xml:"pstruct2"       yaml:"pstruct2"`
 }
 
 type testSubConfig struct {
-	Bool    bool     `json:"bool" xml:"bool" yaml:"bool" toml:"bool"`
-	Int     int64    `json:"int" xml:"int" yaml:"int" toml:"int"`
-	StringP *string  `json:"string" xml:"string" yaml:"string" toml:"string"`
-	FloatP  *float64 `json:"float" xml:"float" yaml:"float" toml:"float"`
+	Bool    bool     `json:"bool"   toml:"bool"   xml:"bool"   yaml:"bool"`
+	Int     int64    `json:"int"    toml:"int"    xml:"int"    yaml:"int"`
+	StringP *string  `json:"string" toml:"string" xml:"string" yaml:"string"`
+	FloatP  *float64 `json:"float"  toml:"float"  xml:"float"  yaml:"float"`
 }
 
 // A few tests hit this.
@@ -41,37 +41,37 @@ func testUnmarshalFileValues(t *testing.T, assert *assert.Assertions, config *te
 	require.NoError(t, err, "there should not be an error reading the test file")
 	// PointerSlice
 	assert.Len(config.PointerSlice, 1, from+"pointerslice is too short")
-	assert.EqualValues(true, config.PointerSlice[0].Bool, from+"the boolean was true")
-	assert.EqualValues(123.4567, *config.PointerSlice[0].FloatP, from+"the float64 was set to 123.4567")
+	assert.True(config.PointerSlice[0].Bool, from+"the boolean was true")
+	assert.InDelta(123.4567, *config.PointerSlice[0].FloatP, 0.0001, from+"the float64 was set to 123.4567")
 	assert.EqualValues(0, config.PointerSlice[0].Int, from+"int was not set so should be zero")
 	assert.Nil(config.PointerSlice[0].StringP, from+"the string pointer was not set so should remain nil")
 
 	// StructSlice
 	assert.Len(config.StructSlice, 1, from+"pointerslice is too short")
-	assert.EqualValues(false, config.StructSlice[0].Bool, from+"the boolean was missing and should be false")
+	assert.False(config.StructSlice[0].Bool, from+"the boolean was missing and should be false")
 	assert.Nil(config.StructSlice[0].FloatP, from+"the float64 was missing and should be nil 1")
 	assert.EqualValues(123, config.StructSlice[0].Int, from+"int was set to 123")
-	assert.EqualValues("foo", *config.StructSlice[0].StringP, from+"the string was set to foo")
+	assert.Equal("foo", *config.StructSlice[0].StringP, from+"the string was set to foo")
 
 	// Struct
-	assert.EqualValues(false, config.Struct.Bool, from+"the boolean was false and should be false")
+	assert.False(config.Struct.Bool, from+"the boolean was false and should be false")
 	assert.Nil(config.Struct.FloatP, from+"the float64 was missing and should be nil 2")
 	assert.EqualValues(0, config.Struct.Int, from+"int was not set and must be 0")
 	assert.Nil(config.Struct.StringP, from+"the string was missing and should be nil")
 
 	// PointerStruct
 	assert.NotNil(config.PointerStruct, from+"the pointer struct has values and must not be nil")
-	assert.EqualValues(false, config.PointerStruct.Bool, from+"the boolean was missing and should be false")
+	assert.False(config.PointerStruct.Bool, from+"the boolean was missing and should be false")
 	assert.Nil(config.PointerStruct.FloatP, from+"the float64 was missing and should be nil 3")
 	assert.EqualValues(0, config.PointerStruct.Int, from+"int was not set and must be 0")
-	assert.EqualValues("foo2", *config.PointerStruct.StringP, from+"the string was set to foo2")
+	assert.Equal("foo2", *config.PointerStruct.StringP, from+"the string was set to foo2")
 
 	// PointerSlice2
 	assert.Empty(config.PointerSlice2, from+"pointerslice2 is too long")
 	// StructSlice2
 	assert.Empty(config.StructSlice2, from+"structslice2 is too long")
 	// Struct2
-	assert.EqualValues(false, config.Struct2.Bool, from+"this must be zero value 1")
+	assert.False(config.Struct2.Bool, from+"this must be zero value 1")
 	assert.Nil(config.Struct2.FloatP, from+"this must be zero value 2")
 	assert.EqualValues(0, config.Struct2.Int, from+"this must be zero value 3")
 	assert.Nil(config.Struct2.StringP, from+"this must be zero value 4")
@@ -79,17 +79,17 @@ func testUnmarshalFileValues(t *testing.T, assert *assert.Assertions, config *te
 	assert.Nil(config.PointerStruct2, from+"pointer struct 2 must be nil")
 }
 
-func TestBrokenENV(t *testing.T) { //nolint:paralleltest // cannot parallel env vars.
+func TestBrokenENV(t *testing.T) {
 	type testBroken struct {
-		Broke []interface{} `xml:"broke"`
+		Broke []any `xml:"broke"`
 	}
 
 	type testBroken2 struct {
-		Broke map[interface{}]string `xml:"broke"`
+		Broke map[any]string `xml:"broke"`
 	}
 
 	type testBroken3 struct {
-		Broke map[string]interface{} `xml:"broke"`
+		Broke map[string]any `xml:"broke"`
 	}
 
 	t.Setenv("TEST_BROKE_0", "f00")
@@ -115,7 +115,7 @@ func TestBrokenENV(t *testing.T) { //nolint:paralleltest // cannot parallel env 
 	assert.False(worked)
 }
 
-func TestUnmarshalENVerrors(t *testing.T) { //nolint:paralleltest // cannot parallel env vars.
+func TestUnmarshalENVerrors(t *testing.T) {
 	assert := assert.New(t)
 
 	type tester struct {
@@ -145,7 +145,7 @@ func TestUnmarshalENVerrors(t *testing.T) { //nolint:paralleltest // cannot para
 	assert.Equal("foo2val", config.Works["foo2string"])
 	assert.Equal([]int{128, 129, 130}, config.Rad["server99"])
 	assert.Equal([]int{256}, config.Rad["server100"])
-	assert.Equal(fmt.Errorf("this is an error"), config.Error)
+	assert.Equal(errors.New("this is an error"), config.Error)
 
 	type tester2 struct {
 		NotBroken  []map[string]string  `xml:"broken"`
@@ -168,11 +168,11 @@ func TestUnmarshalENVerrors(t *testing.T) { //nolint:paralleltest // cannot para
 	assert.True(worked)
 
 	f := *config2.NotBroken2[0]
-	assert.EqualValues("at-charlies", config2.NotBroken[0]["freesauce"])
-	assert.EqualValues("at-daves", f["freesoup"])
-	assert.EqualValues("not-at-pops", config2.HasStuff[0]["freesoda"])
-	assert.EqualValues("at-pops", config2.HasStuff[0]["freetime"])
-	assert.EqualValues("", config2.HasStuff[0]["a"], "the empty map value must be set when the env var is empty")
+	assert.Equal("at-charlies", config2.NotBroken[0]["freesauce"])
+	assert.Equal("at-daves", f["freesoup"])
+	assert.Equal("not-at-pops", config2.HasStuff[0]["freesoda"])
+	assert.Equal("at-pops", config2.HasStuff[0]["freetime"])
+	assert.Empty(config2.HasStuff[0]["a"], "the empty map value must be set when the env var is empty")
 	assert.Nil(config2.NotBroken3, "a nil map without overrides must remain nil")
 }
 
@@ -244,8 +244,8 @@ func testOscureENV(t *testing.T, assert *assert.Assertions) {
 		require.NoError(t, err)
 
 		assert.Len(config.FloatSlice, 2)
-		assert.EqualValues(-5, config.FloatSlice[0])
-		assert.EqualValues(8, config.FloatSlice[1])
+		assert.InDelta(-5, config.FloatSlice[0], 0.0001)
+		assert.InDelta(8, config.FloatSlice[1], 0.0001)
 
 		assert.Len(config.UintSliceP, 2)
 		assert.EqualValues(12, *config.UintSliceP[0])
@@ -258,7 +258,7 @@ func testOscureENV(t *testing.T, assert *assert.Assertions) {
 		wut := *config.Wut
 
 		assert.Len(weirdo, 1)
-		assert.EqualValues(-1, weirdo[0])
+		assert.Equal(-1, weirdo[0])
 		assert.Len(wut, 1)
 		assert.True(wut[0].Bool)
 	}

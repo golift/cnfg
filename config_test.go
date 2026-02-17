@@ -53,9 +53,9 @@ func (t *TimeX) UnmarshalENV(tag, val string) error {
 func ExampleENVUnmarshaler() {
 	config := &AppConfig{}
 
-	os.Setenv("APP_IN", "5m")
-	os.Setenv("APP_IN_X", "10")
-	os.Setenv("APP_NAME", "myApp")
+	_ = os.Setenv("APP_IN", "5m")
+	_ = os.Setenv("APP_IN_X", "10")
+	_ = os.Setenv("APP_NAME", "myApp")
 
 	_, err := cnfg.UnmarshalENV(config, "APP")
 	if err != nil {

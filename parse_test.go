@@ -14,7 +14,7 @@ func TestParseInt(t *testing.T) {
 
 	assert := assert.New(t)
 
-	for _, val := range []interface{}{int(0), int8(8), int16(16), int32(32), int64(64)} {
+	for _, val := range []any{int(0), int8(8), int16(16), int32(32), int64(64)} {
 		i, err := parseInt(val, fmt.Sprintf("%d", val))
 
 		require.NoError(t, err)
@@ -22,7 +22,7 @@ func TestParseInt(t *testing.T) {
 	}
 }
 
-func TestParseByteSlice(t *testing.T) { //nolint:paralleltest
+func TestParseByteSlice(t *testing.T) {
 	assert := assert.New(t)
 
 	type test struct {
@@ -51,7 +51,7 @@ func TestParseUint(t *testing.T) {
 	embeddedInt := &test{}
 	theField := reflect.ValueOf(embeddedInt).Elem().Field(0)
 
-	for _, val := range []interface{}{uint(0), uint16(16), uint32(32), uint64(64)} {
+	for _, val := range []any{uint(0), uint16(16), uint32(32), uint64(64)} {
 		err := parseUint(theField, val, "1")
 		require.NoError(t, err)
 		assert.EqualValues(1, embeddedInt.F)
