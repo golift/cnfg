@@ -1,6 +1,7 @@
 package cnfg
 
 import (
+	"maps"
 	"reflect"
 	"strings"
 )
@@ -32,9 +33,7 @@ func (p Pairs) Set(k, v string) {
 
 // Merge merges two Pairs maps.
 func (p Pairs) Merge(pairs Pairs) {
-	for k, v := range pairs {
-		p[k] = v
-	}
+	maps.Copy(p, pairs)
 }
 
 // UnmarshalMap parses and processes a map of key/value pairs as though they

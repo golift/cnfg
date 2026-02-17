@@ -20,7 +20,7 @@ func (p *unparser) DeconStruct(field reflect.Value, prefix string) (Pairs, error
 	output := Pairs{}
 
 	element := field.Type().Elem()
-	for idx := 0; idx < element.NumField(); idx++ { // Loop each struct member
+	for idx := range element.NumField() { // Loop each struct member
 		tagval := strings.Split(element.Field(idx).Tag.Get(p.Tag), ",")
 		tag := tagval[0]
 
@@ -227,7 +227,7 @@ func (p *unparser) SliceValue(field reflect.Value, tag string, omitempty bool) (
 	output := Pairs{}
 
 	total := field.Len()
-	for i := 0; i < total; i++ {
+	for i := range total {
 		ntag := strings.Join([]string{tag, strconv.Itoa(i)}, LevelSeparator)
 		value := reflect.Indirect(field.Index(i).Addr())
 

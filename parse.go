@@ -26,7 +26,7 @@ func (p *parser) Struct(field reflect.Value, prefix string) (bool, error) {
 	var exitOk bool
 
 	t := field.Type().Elem()
-	for idx := 0; idx < t.NumField(); idx++ { // Loop each struct member
+	for idx := range t.NumField() { // Loop each struct member
 		tagval := strings.Split(t.Field(idx).Tag.Get(p.Tag), ",")
 		shorttag := tagval[0]
 
