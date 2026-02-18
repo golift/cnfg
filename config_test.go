@@ -1,6 +1,7 @@
 package cnfg_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -79,11 +80,15 @@ func TestUnmarshalText(t *testing.T) {
 func TestUnmarshalJSON(t *testing.T) {
 	t.Parallel()
 
-	d := cnfg.Duration{Duration: time.Minute + time.Hour}
-	b, err := d.MarshalJSON()
+	type testStruct struct {
+		D cnfg.Duration `json:"d"`
+	}
+
+	d := testStruct{D: cnfg.Duration{Duration: time.Hour + time.Minute}}
+	b, err := json.Marshal(d)
 
 	require.NoError(t, err, "this method must not return an error")
-	assert.Equal(t, []byte(`"1h1m0s"`), b)
+	assert.JSONEq(t, `{"d":"1h1m"}`, string(b))
 }
 
 func TestString(t *testing.T) {
@@ -91,7 +96,9 @@ func TestString(t *testing.T) {
 
 	testDur := cnfg.Duration{Duration: time.Hour + time.Minute}
 	assert.Equal(t, "1h1m", testDur.String())
+	assert.Equal(t, "1h1m", fmt.Sprint(testDur))
 
 	testDur = cnfg.Duration{Duration: time.Hour}
 	assert.Equal(t, "1h", testDur.String())
+	assert.Equal(t, "1h", fmt.Sprint(testDur))
 }

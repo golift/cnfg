@@ -54,7 +54,7 @@ const (
 // your application. Use the config.Duration type to support automatic unmarshal
 // from all sources. If you do not use a config file, do not use this type because
 // the environment unmarshaler supports time.Duration natively.
-type Duration struct{ time.Duration }
+type Duration struct{ time.Duration } //nolint:recvcheck // pointer receiver and non-pointer receiver is on purpose.
 
 // UnmarshalText parses a duration type from a config file. This method works
 // with the Duration type to allow unmarshaling of durations from files and
@@ -71,17 +71,17 @@ func (d *Duration) UnmarshalText(b []byte) error {
 }
 
 // MarshalText returns the string representation of a Duration. ie. 1m32s.
-func (d *Duration) MarshalText() ([]byte, error) {
-	return []byte(d.Duration.String()), nil
+func (d Duration) MarshalText() ([]byte, error) {
+	return []byte(d.String()), nil
 }
 
 // MarshalJSON returns the string representation of a Duration for JSON. ie. "1m32s".
-func (d *Duration) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + d.Duration.String() + `"`), nil
+func (d Duration) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + d.String() + `"`), nil
 }
 
 // String returns a Duration as string without trailing zero units.
-func (d *Duration) String() string {
+func (d Duration) String() string {
 	dur := d.Duration.String()
 	if len(dur) > 3 && dur[len(dur)-3:] == "m0s" {
 		dur = dur[:len(dur)-2]
