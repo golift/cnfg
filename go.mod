@@ -5,7 +5,7 @@ go 1.24
 toolchain go1.26.0
 
 // for tests.
-require github.com/stretchr/testify v1.11.1
+require github.com/stretchr/testify v1.12.0
 
 // testify imports these.
 require (
