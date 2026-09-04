@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strings"
 	"sync"
-	"unicode"
 )
 
 // Map keys are recovered by peeling a typed suffix from each child env name.
@@ -100,13 +99,13 @@ func isIndexedType(typ reflect.Type) bool {
 	return kind == reflect.Slice || kind == reflect.Array
 }
 
-func isDigits(s string) bool {
-	if s == "" {
+func isDigits(token string) bool {
+	if token == "" {
 		return false
 	}
 
-	for _, r := range s {
-		if !unicode.IsDigit(r) {
+	for idx := range len(token) {
+		if token[idx] < '0' || token[idx] > '9' {
 			return false
 		}
 	}
@@ -354,7 +353,8 @@ func (p *parser) setMapEntry(field reflect.Value, tag, key string, delenv bool) 
 	val, hasExact := p.Vals[exact]
 
 	if delenv {
-		p.unsetMapEnv(exact)
+		// ENVUnmarshaler (TimeX) still reads companion names like tag+"_X".
+		defer p.unsetMapEnv(exact)
 	}
 
 	keyval := reflect.Indirect(reflect.New(field.Type().Key()))

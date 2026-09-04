@@ -414,6 +414,47 @@ func TestUnmarshalENVMapTimeXCompanionVar(t *testing.T) {
 	assert.NotContains(config.In, "job_X")
 }
 
+func TestUnmarshalENVMapTimeXDelenvAfterParse(t *testing.T) {
+	assert := assert.New(t)
+
+	t.Setenv("APP_IN_job", "5m")
+	t.Setenv("APP_IN_job_X", "10")
+
+	type cfg struct {
+		In map[string]TimeX `xml:"in,delenv"`
+	}
+
+	config := &cfg{}
+	ok, err := cnfg.UnmarshalENV(config, "APP")
+
+	require.NoError(t, err)
+	assert.True(ok)
+	require.Contains(t, config.In, "job")
+	assert.Equal(50*time.Minute, config.In["job"].Duration)
+	assert.Empty(os.Getenv("APP_IN_job"))
+	assert.Empty(os.Getenv("APP_IN_job_X"))
+}
+
+func TestUnmarshalMapASCIISliceIndexNotUnicodeDigit(t *testing.T) {
+	t.Parallel()
+
+	assert := assert.New(t)
+
+	type cfg struct {
+		M map[string][]int `xml:"m"`
+	}
+
+	config := &cfg{}
+	ok, err := cnfg.UnmarshalMap(cnfg.Pairs{
+		"M_server_١_0": "128",
+	}, config)
+
+	require.NoError(t, err)
+	assert.True(ok)
+	assert.Equal([]int{128}, config.M["server_١"])
+	assert.NotContains(config.M, "server")
+}
+
 func TestUnmarshalMapUnexportedEmbedDoesNotRecurse(t *testing.T) {
 	t.Parallel()
 
