@@ -54,7 +54,7 @@ const (
 // your application. Use the config.Duration type to support automatic unmarshal
 // from all sources. If you do not use a config file, do not use this type because
 // the environment unmarshaler supports time.Duration natively.
-type Duration struct{ time.Duration } //nolint:recvcheck // pointer receiver and non-pointer receiver is on purpose.
+type Duration struct{ time.Duration }
 
 // UnmarshalText parses a duration type from a config file. This method works
 // with the Duration type to allow unmarshaling of durations from files and

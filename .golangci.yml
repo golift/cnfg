@@ -5,8 +5,11 @@ linters:
     - depguard
     - exhaustive
     - exhaustruct
+    - exhaustruct_v5
     - funcorder
+    - gomodguard
     - noinlineerr
+    - wsl
   exclusions:
     rules:
       - linters:

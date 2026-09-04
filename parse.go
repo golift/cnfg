@@ -71,7 +71,7 @@ func (p *parser) Anything(field reflect.Value, tag, envval string, force, delenv
 	}
 
 	switch field.Kind() {
-	case reflect.Ptr:
+	case reflect.Pointer:
 		return p.Pointer(field, tag, envval, delenv)
 	case reflect.Struct:
 		return p.Struct(field.Addr(), tag)
