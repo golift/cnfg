@@ -50,7 +50,7 @@ func UnmarshalMap(pairs map[string]string, i any) (bool, error) {
 // Use this version of UnmarshalMap if you need to change the tag or prefix.
 func (e *ENV) UnmarshalMap(pairs map[string]string, i any) (bool, error) {
 	value := reflect.ValueOf(i)
-	if value.Kind() != reflect.Ptr || value.Elem().Kind() != reflect.Struct {
+	if value.Kind() != reflect.Pointer || value.Elem().Kind() != reflect.Struct {
 		return false, ErrInvalidInterface
 	}
 

@@ -70,7 +70,7 @@ func (p *unparser) Anything(field reflect.Value, tag string, omitempty bool) (Pa
 	}
 
 	switch field.Kind() {
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if !field.Elem().CanAddr() {
 			return output, nil
 		}

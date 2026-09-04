@@ -25,7 +25,7 @@ func UnmarshalENV(i any, prefixes ...string) (bool, error) {
 // interface. Uses the Prefix and Tag name from the &ENV{} struct values.
 func (e *ENV) Unmarshal(i any) (bool, error) {
 	value := reflect.ValueOf(i)
-	if value.Kind() != reflect.Ptr || value.Elem().Kind() != reflect.Struct {
+	if value.Kind() != reflect.Pointer || value.Elem().Kind() != reflect.Struct {
 		return false, ErrInvalidInterface
 	}
 
@@ -49,7 +49,7 @@ func MarshalENV(i any, prefix string) (Pairs, error) {
 // Marshal deconstructs a data structure into environment variable pairs.
 func (e *ENV) Marshal(i any) (Pairs, error) {
 	value := reflect.ValueOf(i)
-	if value.Kind() != reflect.Ptr || value.Elem().Kind() != reflect.Struct {
+	if value.Kind() != reflect.Pointer || value.Elem().Kind() != reflect.Struct {
 		return nil, ErrInvalidInterface
 	}
 
