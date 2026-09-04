@@ -262,7 +262,7 @@ func (p *parser) Slice(field reflect.Value, tag string, delenv bool) (bool, erro
 	)
 
 	// slice of bytes works differently than any other slice type.
-	if value.Type().String() == "[]uint8" {
+	if isByteSlice(value.Type()) {
 		envval, exists := p.Vals[tag]
 		found = exists
 
@@ -326,10 +326,12 @@ func (p *parser) SliceValue(field reflect.Value, tag string, delenv bool) (bool,
 }
 
 func (p *parser) Map(field reflect.Value, tag string, delenv bool) (bool, error) {
-	var found bool
+	if delenv {
+		_ = os.Unsetenv(tag)
+	}
 
-	vals := p.Vals.Get(tag) // key=val, ... (prefix stripped)
-	if len(vals) < 1 {
+	keys := p.mapKeys(tag, field.Type().Elem())
+	if len(keys) == 0 {
 		return false, nil
 	}
 
@@ -337,39 +339,17 @@ func (p *parser) Map(field reflect.Value, tag string, delenv bool) (bool, error)
 		field.Set(reflect.MakeMap(field.Type()))
 	}
 
-	for key, val := range vals {
-		if delenv {
-			_ = os.Unsetenv(key)
-		}
+	var found bool
 
-		// Maps have 2 types. The index and the value. First, parse the index into its type.
-		keyval := reflect.Indirect(reflect.New(field.Type().Key()))
-		if _, err := p.Anything(keyval, tag, key, true, delenv); err != nil {
-			return false, err
-		}
-
-		if val == "" {
-			// a blank env value was provided, set the field to nil.
-			found = true
-
-			field.SetMapIndex(keyval, reflect.Value{})
-
-			continue
-		}
-
-		// And now parse the second type: the value.
-		valval := reflect.Indirect(reflect.New(field.Type().Elem()))
-
-		exists, err := p.Anything(valval, strings.Join([]string{tag, key}, LevelSeparator), val, true, delenv)
+	for _, key := range keys {
+		ok, err := p.setMapEntry(field, tag, key, delenv)
 		if err != nil {
 			return false, err
 		}
 
-		if exists {
+		if ok {
 			found = true
 		}
-
-		field.SetMapIndex(keyval, valval)
 	}
 
 	return found, nil

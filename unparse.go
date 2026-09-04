@@ -59,10 +59,25 @@ func (p *unparser) DeconStruct(field reflect.Value, prefix string) (Pairs, error
 	return output, nil
 }
 
+func copyIfUnaddr(field reflect.Value) reflect.Value {
+	if field.CanAddr() || !field.IsValid() || field.Kind() == reflect.Interface {
+		return field
+	}
+
+	cp := reflect.New(field.Type())
+	cp.Elem().Set(field)
+
+	return cp.Elem()
+}
+
 func (p *unparser) Anything(field reflect.Value, tag string, omitempty bool) (Pairs, error) { //nolint:cyclop
 	if field.IsZero() && omitempty {
 		return Pairs{}, nil
 	}
+
+	// Map values and some interfaces are not addressable; copy so
+	// TextMarshaler / struct walking can run the same as on fields.
+	field = copyIfUnaddr(field)
 
 	output, exists, err := p.Interface(field, tag, omitempty)
 	if err != nil || exists {
@@ -214,7 +229,7 @@ func (p *unparser) Slice(field reflect.Value, tag string, omitempty bool) (Pairs
 	output := Pairs{}
 
 	// slice of bytes works differently than any other slice type.
-	if field.Type().String() == "[]uint8" {
+	if isByteSlice(field.Type()) {
 		output.Set(tag, string(field.Bytes()))
 
 		return output, nil
