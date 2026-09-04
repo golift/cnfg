@@ -12,15 +12,19 @@ type Pairs map[string]string
 
 const pairSize = 2
 
-// Get allows getting only specific env variables by prefix.
-// The prefix is trimmed before returning.
+// Get returns pairs whose names are children of prefix (prefix + "_").
+// The exact name prefix is not a child. The first token after the prefix
+// is the returned key, so this helper cannot see "_" inside map keys.
 func (p Pairs) Get(prefix string) Pairs {
 	mapPairs := make(Pairs)
+	child := prefix + LevelSeparator
 
 	for k, v := range p {
-		if strings.HasPrefix(k, prefix) {
-			mapPairs[strings.SplitN(strings.TrimPrefix(k, prefix+LevelSeparator), LevelSeparator, pairSize)[0]] = v
+		if !strings.HasPrefix(k, child) {
+			continue
 		}
+
+		mapPairs[strings.SplitN(strings.TrimPrefix(k, child), LevelSeparator, pairSize)[0]] = v
 	}
 
 	return mapPairs
