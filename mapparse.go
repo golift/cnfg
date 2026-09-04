@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"slices"
 	"strings"
+	"sync"
 	"unicode"
 )
 
@@ -19,6 +20,17 @@ type envField struct {
 	tokens []string
 	typ    reflect.Type
 }
+
+type envFieldsKey struct {
+	typ reflect.Type
+	tag string
+	low bool
+}
+
+// envFieldsCache holds immutable (type, tag, case) field lists for the peel.
+//
+//nolint:gochecknoglobals // reflect metadata does not change for a given triple.
+var envFieldsCache sync.Map // map[envFieldsKey][]envField
 
 func derefType(typ reflect.Type) reflect.Type {
 	for typ != nil && typ.Kind() == reflect.Pointer {
@@ -128,7 +140,20 @@ func envFieldName(field reflect.StructField, tag string, low bool) (string, bool
 }
 
 func envFields(typ reflect.Type, tag string, low bool) []envField {
-	return collectEnvFields(typ, tag, low, make(map[reflect.Type]struct{}))
+	typ = derefType(typ)
+	key := envFieldsKey{typ: typ, tag: tag, low: low}
+
+	if cached, ok := envFieldsCache.Load(key); ok {
+		fields, _ := cached.([]envField)
+
+		return fields
+	}
+
+	fields := collectEnvFields(typ, tag, low, make(map[reflect.Type]struct{}))
+	actual, _ := envFieldsCache.LoadOrStore(key, fields)
+	stored, _ := actual.([]envField)
+
+	return stored
 }
 
 func collectEnvFields(typ reflect.Type, tag string, low bool, seen map[reflect.Type]struct{}) []envField {

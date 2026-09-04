@@ -2,6 +2,7 @@ package cnfg_test
 
 import (
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -438,4 +439,33 @@ func TestUnmarshalMapUnexportedEmbedDoesNotRecurse(t *testing.T) {
 	require.Contains(t, config.N, "a")
 	assert.Nil(config.N["a"].node)
 	assert.Equal("ok", config.N["a"].Value)
+}
+
+func BenchmarkUnmarshalMapManyRoles(b *testing.B) {
+	type role struct {
+		Permissions []string `xml:"permissions"`
+	}
+
+	type cfg struct {
+		Roles map[string]role `xml:"roles"`
+	}
+
+	pairs := make(cnfg.Pairs, 900)
+
+	for idx := range 300 {
+		name := "role" + strconv.Itoa(idx)
+		pairs["ROLES_"+name+"_PERMISSIONS_0"] = testPermAPI
+		pairs["ROLES_"+name+"_PERMISSIONS_1"] = testPermGUI
+		pairs["ROLES_"+name+"_PERMISSIONS_2"] = testStats
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for b.Loop() {
+		config := &cfg{}
+		if _, err := cnfg.UnmarshalMap(pairs, config); err != nil {
+			b.Fatal(err)
+		}
+	}
 }
