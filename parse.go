@@ -262,7 +262,7 @@ func (p *parser) Slice(field reflect.Value, tag string, delenv bool) (bool, erro
 	)
 
 	// slice of bytes works differently than any other slice type.
-	if value.Type().String() == "[]uint8" {
+	if isByteSlice(value.Type()) {
 		envval, exists := p.Vals[tag]
 		found = exists
 
@@ -326,6 +326,10 @@ func (p *parser) SliceValue(field reflect.Value, tag string, delenv bool) (bool,
 }
 
 func (p *parser) Map(field reflect.Value, tag string, delenv bool) (bool, error) {
+	if delenv {
+		_ = os.Unsetenv(tag)
+	}
+
 	keys := p.mapKeys(tag, field.Type().Elem())
 	if len(keys) == 0 {
 		return false, nil

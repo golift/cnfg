@@ -10,8 +10,15 @@ import (
 )
 
 // Map keys are recovered by peeling a typed suffix from each child env name.
+// The first (shortest) boundary whose tail is a complete path down the value
+// type wins, so nested fields that reuse a tag do not become phantom keys.
 // Pairs.Get is not used: it treats the exact prefix as a match and can only
 // see the first "_" token, so keys such as read_only never round-trip.
+
+type envField struct {
+	tokens []string
+	typ    reflect.Type
+}
 
 func derefType(typ reflect.Type) reflect.Type {
 	for typ != nil && typ.Kind() == reflect.Pointer {
@@ -21,15 +28,30 @@ func derefType(typ reflect.Type) reflect.Type {
 	return typ
 }
 
-func implementsEnvScalar(typ reflect.Type) bool {
+func pointerTo(typ reflect.Type) reflect.Type {
+	if typ.Kind() == reflect.Pointer {
+		return typ
+	}
+
+	return reflect.PointerTo(typ)
+}
+
+func implementsENVUnmarshaler(typ reflect.Type) bool {
+	typ = derefType(typ)
 	if typ == nil {
 		return false
 	}
 
-	ptr := typ
-	if typ.Kind() != reflect.Pointer {
-		ptr = reflect.PointerTo(typ)
+	return pointerTo(typ).Implements(reflect.TypeFor[ENVUnmarshaler]())
+}
+
+func implementsEnvScalar(typ reflect.Type) bool {
+	typ = derefType(typ)
+	if typ == nil {
+		return false
 	}
+
+	ptr := pointerTo(typ)
 
 	return ptr.Implements(reflect.TypeFor[ENVUnmarshaler]()) ||
 		ptr.Implements(reflect.TypeFor[encoding.TextUnmarshaler]()) ||
@@ -37,7 +59,8 @@ func implementsEnvScalar(typ reflect.Type) bool {
 }
 
 func isByteSlice(typ reflect.Type) bool {
-	return typ != nil && typ.Kind() == reflect.Slice && typ.Elem().Kind() == reflect.Uint8
+	// parser.Slice only treats the unnamed []uint8 / []byte type as a blob.
+	return typ != nil && typ.String() == "[]uint8"
 }
 
 func isScalarEnvType(typ reflect.Type) bool {
@@ -52,6 +75,17 @@ func isScalarEnvType(typ reflect.Type) bool {
 	default:
 		return true
 	}
+}
+
+func isIndexedType(typ reflect.Type) bool {
+	typ = derefType(typ)
+	if typ == nil || isByteSlice(typ) || isScalarEnvType(typ) {
+		return false
+	}
+
+	kind := typ.Kind()
+
+	return kind == reflect.Slice || kind == reflect.Array
 }
 
 func isDigits(s string) bool {
@@ -69,7 +103,7 @@ func isDigits(s string) bool {
 }
 
 func envFieldName(field reflect.StructField, tag string, low bool) (string, bool, bool) {
-	if !field.IsExported() && !field.Anonymous {
+	if !field.IsExported() {
 		return "", false, true
 	}
 
@@ -78,7 +112,7 @@ func envFieldName(field reflect.StructField, tag string, low bool) (string, bool
 		return "", false, true
 	}
 
-	if field.Anonymous && (name == "" || name == field.Name) {
+	if field.Anonymous && name == "" {
 		return "", true, false
 	}
 
@@ -93,13 +127,23 @@ func envFieldName(field reflect.StructField, tag string, low bool) (string, bool
 	return name, false, false
 }
 
-func structFieldTags(typ reflect.Type, tag string, low bool) []string {
+func envFields(typ reflect.Type, tag string, low bool) []envField {
+	return collectEnvFields(typ, tag, low, make(map[reflect.Type]struct{}))
+}
+
+func collectEnvFields(typ reflect.Type, tag string, low bool, seen map[reflect.Type]struct{}) []envField {
 	typ = derefType(typ)
 	if typ == nil || typ.Kind() != reflect.Struct {
 		return nil
 	}
 
-	var out []string
+	if _, dup := seen[typ]; dup {
+		return nil
+	}
+
+	seen[typ] = struct{}{}
+
+	var out []envField
 
 	for idx := range typ.NumField() {
 		field := typ.Field(idx)
@@ -110,88 +154,72 @@ func structFieldTags(typ reflect.Type, tag string, low bool) []string {
 		}
 
 		if embed {
-			out = append(out, structFieldTags(field.Type, tag, low)...)
+			out = append(out, collectEnvFields(field.Type, tag, low, seen)...)
 
 			continue
 		}
 
-		out = append(out, name)
+		out = append(out, envField{
+			tokens: strings.Split(name, LevelSeparator),
+			typ:    field.Type,
+		})
 	}
 
 	return out
 }
 
-func structFieldTagSet(typ reflect.Type, tag string, low bool) map[string]struct{} {
-	out := make(map[string]struct{})
-	for _, name := range structFieldTags(typ, tag, low) {
-		out[name] = struct{}{}
+func tokensPrefix(parts, prefix []string) bool {
+	if len(prefix) == 0 || len(parts) < len(prefix) {
+		return false
 	}
 
-	return out
-}
-
-func isStructFieldTag(typ reflect.Type, name, tag string, low bool) bool {
-	_, ok := structFieldTagSet(typ, tag, low)[name]
-
-	return ok
-}
-
-func peelStructMapKey(remainder string, typ reflect.Type, tag string, low bool) (string, bool) {
-	fields := structFieldTagSet(typ, tag, low)
-	parts := strings.Split(remainder, LevelSeparator)
-
-	var best string
-
-	for idx := 1; idx < len(parts); idx++ {
-		if _, ok := fields[parts[idx]]; !ok {
-			continue
-		}
-
-		key := strings.Join(parts[:idx], LevelSeparator)
-		if len(key) >= len(best) {
-			best = key
+	for idx, token := range prefix {
+		if parts[idx] != token {
+			return false
 		}
 	}
 
-	return best, best != ""
+	return true
 }
 
-func sliceIndexOK(elemType reflect.Type, after []string, tag string, low bool) bool {
-	elemType = derefType(elemType)
-	if isScalarEnvType(elemType) {
-		return len(after) == 0
+func fieldPathOK(typ reflect.Type, parts []string, tag string, low bool) bool {
+	typ = derefType(typ)
+	if len(parts) == 0 {
+		return !isIndexedType(typ)
 	}
 
-	switch elemType.Kind() {
+	if isScalarEnvType(typ) {
+		return false
+	}
+
+	switch typ.Kind() {
 	case reflect.Struct:
-		return len(after) == 0 || isStructFieldTag(elemType, after[0], tag, low)
+		return structPathOK(typ, parts, tag, low)
 	case reflect.Slice, reflect.Array:
-		if len(after) == 0 {
-			return true
+		if !isDigits(parts[0]) {
+			return false
 		}
 
-		return isDigits(after[0])
+		return fieldPathOK(typ.Elem(), parts[1:], tag, low)
 	case reflect.Map:
 		return true
 	default:
-		return len(after) == 0
+		return false
 	}
 }
 
-func peelSliceMapKey(remainder string, elemType reflect.Type, tag string, low bool) (string, bool) {
-	parts := strings.Split(remainder, LevelSeparator)
-
-	for idx := 1; idx < len(parts); idx++ {
-		if !isDigits(parts[idx]) {
+func structPathOK(typ reflect.Type, parts []string, tag string, low bool) bool {
+	for _, field := range envFields(typ, tag, low) {
+		if !tokensPrefix(parts, field.tokens) {
 			continue
 		}
 
-		if sliceIndexOK(elemType, parts[idx+1:], tag, low) {
-			return strings.Join(parts[:idx], LevelSeparator), true
+		if fieldPathOK(field.typ, parts[len(field.tokens):], tag, low) {
+			return true
 		}
 	}
 
-	return "", false
+	return false
 }
 
 func peelMapKey(remainder string, valType reflect.Type, tag string, low bool) (string, bool) {
@@ -204,22 +232,46 @@ func peelMapKey(remainder string, valType reflect.Type, tag string, low bool) (s
 		return remainder, true
 	}
 
-	switch valType.Kind() {
-	case reflect.Struct:
-		if key, ok := peelStructMapKey(remainder, valType, tag, low); ok {
-			return key, true
-		}
-
-		return remainder, true
-	case reflect.Slice, reflect.Array:
-		return peelSliceMapKey(remainder, valType.Elem(), tag, low)
-	case reflect.Map:
+	if valType.Kind() == reflect.Map {
 		key, _, _ := strings.Cut(remainder, LevelSeparator)
 
 		return key, key != ""
-	default:
-		return remainder, true
 	}
+
+	parts := strings.Split(remainder, LevelSeparator)
+	for idx := 1; idx <= len(parts); idx++ {
+		if fieldPathOK(valType, parts[idx:], tag, low) {
+			return strings.Join(parts[:idx], LevelSeparator), true
+		}
+	}
+
+	return "", false
+}
+
+func dropUnmarshalerDescendants(keys []string, valType reflect.Type) []string {
+	if !implementsENVUnmarshaler(valType) {
+		return keys
+	}
+
+	out := make([]string, 0, len(keys))
+
+	for _, key := range keys {
+		skip := false
+
+		for _, other := range keys {
+			if other != key && strings.HasPrefix(key, other+LevelSeparator) {
+				skip = true
+
+				break
+			}
+		}
+
+		if !skip {
+			out = append(out, key)
+		}
+	}
+
+	return out
 }
 
 func (p *parser) mapKeys(prefix string, valType reflect.Type) []string {
@@ -233,8 +285,16 @@ func (p *parser) mapKeys(prefix string, valType reflect.Type) []string {
 			continue
 		}
 
-		key, ok := peelMapKey(strings.TrimPrefix(name, child), valType, p.Tag, p.Low)
-		if !ok {
+		remainder := strings.TrimPrefix(name, child)
+		key, matched := peelMapKey(remainder, valType, p.Tag, p.Low)
+
+		if p.Vals[name] == "" && name == child+remainder &&
+			(!matched || (isIndexedType(valType) && key != remainder)) {
+			key = remainder
+			matched = true
+		}
+
+		if !matched {
 			continue
 		}
 
@@ -247,6 +307,7 @@ func (p *parser) mapKeys(prefix string, valType reflect.Type) []string {
 		keys = append(keys, key)
 	}
 
+	keys = dropUnmarshalerDescendants(keys, valType)
 	slices.Sort(keys)
 
 	return keys

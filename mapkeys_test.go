@@ -144,6 +144,8 @@ func TestUnmarshalENVEmptyMapValueClears(t *testing.T) {
 func TestUnmarshalENVDelenvUnsetsFullNames(t *testing.T) {
 	assert := assert.New(t)
 
+	t.Setenv("foo_bar", "sentinel")
+	t.Setenv("YO_WORKS", "bare-prefix")
 	t.Setenv("YO_WORKS_foo_bar", "fooval")
 	t.Setenv("YO_WORKS_plain", "plainval")
 
@@ -160,7 +162,8 @@ func TestUnmarshalENVDelenvUnsetsFullNames(t *testing.T) {
 	assert.Equal("plainval", config.Works["plain"])
 	assert.Empty(os.Getenv("YO_WORKS_foo_bar"))
 	assert.Empty(os.Getenv("YO_WORKS_plain"))
-	assert.Empty(os.Getenv("foo_bar"), "delenv must not unset the bare map key")
+	assert.Empty(os.Getenv("YO_WORKS"), "delenv must also unset the bare map prefix")
+	assert.Equal("sentinel", os.Getenv("foo_bar"), "delenv must not unset the bare map key")
 }
 
 func TestMarshalENVRoundTripStructMap(t *testing.T) {
@@ -234,4 +237,205 @@ func TestUnmarshalMapNestedMapKeepsFirstToken(t *testing.T) {
 	require.Contains(t, config.Nested, "outer")
 	assert.Equal("val", config.Nested["outer"]["inner_key"])
 	assert.NotContains(config.Nested, "outer_inner")
+}
+
+func TestUnmarshalMapDoesNotInventNestedStructKeys(t *testing.T) {
+	t.Parallel()
+
+	assert := assert.New(t)
+
+	type dog struct {
+		Name string `xml:"name"`
+	}
+
+	type shelter struct {
+		Name string `xml:"name"`
+		Dogs []dog  `xml:"dogs"`
+	}
+
+	type cfg struct {
+		S map[string]shelter `xml:"s"`
+	}
+
+	config := &cfg{}
+	worked, err := cnfg.UnmarshalMap(cnfg.Pairs{
+		"S_a_NAME":        "happy",
+		"S_a_DOGS_0_NAME": "rex",
+	}, config)
+
+	require.NoError(t, err)
+	assert.True(worked)
+	require.Contains(t, config.S, "a")
+	assert.Equal("happy", config.S["a"].Name)
+	assert.Len(config.S["a"].Dogs, 1)
+	assert.Equal("rex", config.S["a"].Dogs[0].Name)
+	assert.NotContains(config.S, "a_DOGS_0")
+}
+
+func TestUnmarshalMapStructFieldTagWithUnderscore(t *testing.T) {
+	t.Parallel()
+
+	assert := assert.New(t)
+
+	type role struct {
+		ReadOnly bool `xml:"read_only"`
+	}
+
+	type cfg struct {
+		Roles map[string]role `xml:"roles"`
+	}
+
+	config := &cfg{}
+	ok, err := cnfg.UnmarshalMap(cnfg.Pairs{
+		"ROLES_admin_READ_ONLY": "true",
+	}, config)
+
+	require.NoError(t, err)
+	assert.True(ok)
+	require.Contains(t, config.Roles, "admin")
+	assert.True(config.Roles["admin"].ReadOnly)
+	assert.NotContains(config.Roles, "admin_READ_ONLY")
+}
+
+func TestUnmarshalMapNestedSliceKeyWithUnderscore(t *testing.T) {
+	t.Parallel()
+
+	assert := assert.New(t)
+
+	type cfg struct {
+		M map[string][][]int `xml:"m"`
+	}
+
+	config := &cfg{}
+	worked, err := cnfg.UnmarshalMap(cnfg.Pairs{
+		"M_server_99_0_0": "1",
+		"M_server_99_0_1": "2",
+	}, config)
+
+	require.NoError(t, err)
+	assert.True(worked)
+	assert.Equal([][]int{{1, 2}}, config.M["server_99"])
+	assert.NotContains(config.M, "server")
+}
+
+func TestUnmarshalENVEmptySliceMapValueClears(t *testing.T) {
+	assert := assert.New(t)
+
+	t.Setenv("APP_VALUES_server_99", "")
+
+	type cfg struct {
+		Values map[string][]int `xml:"values"`
+	}
+
+	config := &cfg{Values: map[string][]int{"server_99": {1, 2}}}
+	ok, err := cnfg.UnmarshalENV(config, "APP")
+
+	require.NoError(t, err)
+	assert.True(ok)
+	assert.Empty(config.Values["server_99"])
+}
+
+func TestUnmarshalMapNamedByteSliceUsesIndexes(t *testing.T) {
+	t.Parallel()
+
+	assert := assert.New(t)
+
+	type bytes []byte
+
+	type cfg struct {
+		Files map[string]bytes  `xml:"files"`
+		Blob  map[string][]byte `xml:"blob"`
+	}
+
+	config := &cfg{}
+	worked, err := cnfg.UnmarshalMap(cnfg.Pairs{
+		"FILES_key_0": "A",
+		"BLOB_key":    "AB",
+	}, config)
+
+	require.NoError(t, err)
+	assert.True(worked)
+	require.Contains(t, config.Files, "key")
+	assert.Equal(bytes{'A'}, config.Files["key"])
+	assert.NotContains(config.Files, "key_0")
+	assert.Equal([]byte("AB"), config.Blob["key"])
+}
+
+func TestUnmarshalMapAnonymousTaggedEmbedUsesTag(t *testing.T) {
+	t.Parallel()
+
+	assert := assert.New(t)
+
+	type Inner struct {
+		X string `xml:"x"`
+	}
+
+	type outer struct {
+		Inner `xml:"Inner"`
+
+		Y string `xml:"y"`
+	}
+
+	type cfg struct {
+		M map[string]outer `xml:"m"`
+	}
+
+	config := &cfg{}
+	worked, err := cnfg.UnmarshalMap(cnfg.Pairs{
+		"M_a_INNER_X": "hello",
+		"M_a_Y":       "y",
+	}, config)
+
+	require.NoError(t, err)
+	assert.True(worked)
+	require.Contains(t, config.M, "a")
+	assert.Equal("hello", config.M["a"].X)
+	assert.Equal("y", config.M["a"].Y)
+}
+
+func TestUnmarshalENVMapTimeXCompanionVar(t *testing.T) {
+	assert := assert.New(t)
+
+	t.Setenv("APP_IN_job", "5m")
+	t.Setenv("APP_IN_job_X", "10")
+
+	type cfg struct {
+		In map[string]TimeX `xml:"in"`
+	}
+
+	config := &cfg{}
+	ok, err := cnfg.UnmarshalENV(config, "APP")
+
+	require.NoError(t, err)
+	assert.True(ok)
+	require.Contains(t, config.In, "job")
+	assert.Equal(50*time.Minute, config.In["job"].Duration)
+	assert.NotContains(config.In, "job_X")
+}
+
+func TestUnmarshalMapUnexportedEmbedDoesNotRecurse(t *testing.T) {
+	t.Parallel()
+
+	assert := assert.New(t)
+
+	type node struct {
+		*node
+
+		Value string `xml:"value"`
+	}
+
+	type cfg struct {
+		N map[string]node `xml:"n"`
+	}
+
+	config := &cfg{}
+	ok, err := cnfg.UnmarshalMap(cnfg.Pairs{
+		"N_a_VALUE": "ok",
+	}, config)
+
+	require.NoError(t, err)
+	assert.True(ok)
+	require.Contains(t, config.N, "a")
+	assert.Nil(config.N["a"].node)
+	assert.Equal("ok", config.N["a"].Value)
 }
