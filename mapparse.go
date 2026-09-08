@@ -363,7 +363,7 @@ func (p *parser) setMapEntry(field reflect.Value, tag, key string, delenv bool) 
 	}
 
 	if hasExact && val == "" {
-		p.note(exact)
+		p.noteConsumed(exact, val)
 		field.SetMapIndex(keyval, reflect.Value{})
 
 		return true, nil
@@ -374,10 +374,6 @@ func (p *parser) setMapEntry(field reflect.Value, tag, key string, delenv bool) 
 	exists, err := p.Anything(valval, exact, val, hasExact, delenv)
 	if err != nil || !exists {
 		return exists, err
-	}
-
-	if hasExact {
-		p.note(exact)
 	}
 
 	field.SetMapIndex(keyval, valval)

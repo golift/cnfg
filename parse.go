@@ -34,6 +34,19 @@ func (p *parser) note(tag string) {
 	p.Used[tag] = val
 }
 
+// noteConsumed records tag only when envval is the value from Vals for that
+// exact name. Recursing into a struct/slice/map does not count the parent
+// name, and parsing a map key (force=true with envval != Vals[tag]) does not
+// count the map's own tag.
+func (p *parser) noteConsumed(tag, envval string) {
+	val, ok := p.Vals[tag]
+	if !ok || val != envval {
+		return
+	}
+
+	p.note(tag)
+}
+
 // Struct does most of the heavy lifting. Called every time a struct is encountered.
 // The entire process begins here. It's very recursive.
 func (p *parser) Struct(field reflect.Value, prefix string) (bool, error) {
@@ -68,10 +81,6 @@ func (p *parser) Struct(field reflect.Value, prefix string) (bool, error) {
 		if err != nil {
 			return false, err
 		} else if exists {
-			if found {
-				p.note(tag)
-			}
-
 			exitOk = true
 		}
 	}
@@ -142,6 +151,8 @@ func (p *parser) Interface(field reflect.Value, tag, envval string, force bool) 
 			return false, fmt.Errorf("UnmarshalENV interface: %w", err)
 		}
 
+		p.noteConsumed(tag, envval)
+
 		return true, nil
 	}
 
@@ -154,6 +165,8 @@ func (p *parser) Interface(field reflect.Value, tag, envval string, force bool) 
 			return false, fmt.Errorf("UnmarshalText interface: %w", err)
 		}
 
+		p.noteConsumed(tag, envval)
+
 		return true, nil
 	}
 
@@ -164,6 +177,8 @@ func (p *parser) Interface(field reflect.Value, tag, envval string, force bool) 
 		if err := v.UnmarshalBinary([]byte(envval)); err != nil {
 			return false, fmt.Errorf("UnmarshalBinary interface: %w", err)
 		}
+
+		p.noteConsumed(tag, envval)
 
 		return true, nil
 	}
@@ -178,6 +193,7 @@ func (p *parser) Member(field reflect.Value, tag, envval string, force bool) (bo
 	// Errors cannot be type-switched from reflection for some reason.
 	if field.Type().String() == "error" {
 		field.Set(reflect.ValueOf(errors.New(envval))) //nolint:err113
+		p.noteConsumed(tag, envval)
 
 		return true, nil
 	}
@@ -221,6 +237,8 @@ func (p *parser) Member(field reflect.Value, tag, envval string, force bool) (bo
 	if err != nil {
 		return false, fmt.Errorf("%s: %w", tag, err)
 	}
+
+	p.noteConsumed(tag, envval)
 
 	return true, nil
 }
@@ -267,6 +285,8 @@ func (p *parser) customMember(field reflect.Value, tag, envval string, force boo
 		return false, fmt.Errorf("%s: %w", tag, err)
 	}
 
+	p.noteConsumed(tag, envval)
+
 	return true, nil
 }
 
@@ -284,7 +304,7 @@ func (p *parser) Slice(field reflect.Value, tag string, delenv bool) (bool, erro
 		envval, exists := p.Vals[tag]
 		found = exists
 		if exists {
-			p.note(tag)
+			p.noteConsumed(tag, envval)
 		}
 
 		value.SetBytes([]byte(envval))
@@ -327,10 +347,6 @@ func (p *parser) SliceValue(field reflect.Value, tag string, delenv bool) (bool,
 			return false, err
 		} else if !applied {
 			continue
-		}
-
-		if inVals {
-			p.note(ntag)
 		}
 
 		found = true

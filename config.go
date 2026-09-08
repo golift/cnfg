@@ -40,8 +40,12 @@ type ENV struct {
 }
 
 // Result is the report from Parse and ParseMap. Ok is the same value Unmarshal
-// returns. Used holds the full env names that actually set a field; leftover
-// prefixed variables are omitted. Add fields here rather than on ENV.
+// returns. Used lists exact env names whose values the parser wrote into a
+// field. Parent names that only exist so children can be set (APP_SERVER when
+// APP_SERVER_HOST applied) and leftover prefixed names are omitted. Custom
+// ENVUnmarshaler types that read extra names via os.Getenv are not listed for
+// those extras. On a parse error Used contains names applied before the
+// failure. Add fields here rather than on ENV.
 type Result struct {
 	Ok   bool
 	Used Pairs
