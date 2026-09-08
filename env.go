@@ -30,6 +30,7 @@ func ParseENV(i any, prefixes ...string) (Result, error) {
 // interface. Uses the Prefix and Tag name from the &ENV{} struct values.
 func (e *ENV) Unmarshal(i any) (bool, error) {
 	res, err := e.Parse(i)
+
 	return res.Ok, err
 }
 

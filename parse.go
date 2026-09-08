@@ -302,8 +302,9 @@ func (p *parser) Slice(field reflect.Value, tag string, delenv bool) (bool, erro
 	// slice of bytes works differently than any other slice type.
 	if isByteSlice(value.Type()) {
 		envval, exists := p.Vals[tag]
-		found = exists
 		if exists {
+			found = true
+
 			p.noteConsumed(tag, envval)
 		}
 

@@ -308,7 +308,7 @@ func testSpecialENV(t *testing.T, assert *assert.Assertions) {
 	require.Error(t, err, "cannot parse an invalid time")
 }
 
-func TestParse(t *testing.T) { //nolint:paralleltest // sets environment variables
+func TestParse(t *testing.T) {
 	t.Setenv("APP_IN", "2s")
 	t.Setenv("APP_IN_X", "3")
 	t.Setenv("APP_NAME", "cnfg")

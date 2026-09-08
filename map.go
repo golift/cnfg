@@ -53,6 +53,7 @@ func UnmarshalMap(pairs map[string]string, i any) (bool, error) {
 // Use this version of UnmarshalMap if you need to change the tag or prefix.
 func (e *ENV) UnmarshalMap(pairs map[string]string, i any) (bool, error) {
 	res, err := e.ParseMap(pairs, i)
+
 	return res.Ok, err
 }
 
