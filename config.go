@@ -37,6 +37,11 @@ type ENV struct {
 	Tag string // Struct tag name.
 	Pfx string // ENV var prefix.
 	Low bool   // Set this false to avoid capitalizing variables.
+	// Used is filled by Unmarshal and UnmarshalMap with the env names that
+	// actually set a field (full names, including Pfx). Unrelated prefixed
+	// variables are omitted. A copy of UnmarshalENV that needs this report
+	// should call ENV.Unmarshal instead.
+	Used Pairs
 }
 
 // Satify goconst.

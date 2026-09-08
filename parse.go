@@ -18,6 +18,20 @@ type parser struct {
 	Low  bool   // allow lowercase variables?
 	Tag  string // struct tag to look for on struct members
 	Vals Pairs  // pairs of env variables (saved at start)
+	Used Pairs  // Vals keys that set a field
+}
+
+func (p *parser) note(tag string) {
+	val, ok := p.Vals[tag]
+	if !ok {
+		return
+	}
+
+	if p.Used == nil {
+		p.Used = make(Pairs)
+	}
+
+	p.Used[tag] = val
 }
 
 // Struct does most of the heavy lifting. Called every time a struct is encountered.
@@ -54,6 +68,10 @@ func (p *parser) Struct(field reflect.Value, prefix string) (bool, error) {
 		if err != nil {
 			return false, err
 		} else if exists {
+			if found {
+				p.note(tag)
+			}
+
 			exitOk = true
 		}
 	}
@@ -265,6 +283,9 @@ func (p *parser) Slice(field reflect.Value, tag string, delenv bool) (bool, erro
 	if isByteSlice(value.Type()) {
 		envval, exists := p.Vals[tag]
 		found = exists
+		if exists {
+			p.note(tag)
+		}
 
 		value.SetBytes([]byte(envval))
 	} else {
@@ -288,7 +309,7 @@ func (p *parser) SliceValue(field reflect.Value, tag string, delenv bool) (bool,
 	total := field.Len()
 	for idx := 0; idx <= total; idx++ {
 		ntag := strings.Join([]string{tag, strconv.Itoa(idx)}, LevelSeparator)
-		envval, exists := p.Vals[ntag]
+		envval, inVals := p.Vals[ntag]
 
 		if delenv {
 			_ = os.Unsetenv(ntag) // delete it if it was requested in the env tag.
@@ -301,10 +322,15 @@ func (p *parser) SliceValue(field reflect.Value, tag string, delenv bool) (bool,
 			value = reflect.Indirect(field.Index(idx).Addr())
 		}
 
-		if exists, err := p.Anything(value, ntag, envval, exists, delenv); err != nil {
+		applied, err := p.Anything(value, ntag, envval, inVals, delenv)
+		if err != nil {
 			return false, err
-		} else if !exists {
+		} else if !applied {
 			continue
+		}
+
+		if inVals {
+			p.note(ntag)
 		}
 
 		found = true

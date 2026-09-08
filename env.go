@@ -36,7 +36,13 @@ func (e *ENV) Unmarshal(i any) (bool, error) {
 	// Save the current environment.
 	parse := &parser{Low: e.Low, Tag: e.Tag, Vals: MapEnvPairs(e.Pfx, os.Environ())}
 
-	return parse.Struct(value, e.Pfx)
+	ok, err := parse.Struct(value, e.Pfx)
+	e.Used = parse.Used
+	if e.Used == nil {
+		e.Used = Pairs{}
+	}
+
+	return ok, err
 }
 
 // MarshalENV turns a data structure into an environment variable.
