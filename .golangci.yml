@@ -15,6 +15,7 @@ linters:
       - linters:
           - err113
           - funlen
+          - goconst
           - staticcheck
           - testpackage
         path: (.+)_test\.go

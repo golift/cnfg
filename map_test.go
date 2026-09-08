@@ -39,6 +39,15 @@ func TestUnmarshalMap(t *testing.T) {
 	worked, err = (&cnfg.ENV{}).UnmarshalMap(pairs, &config)
 	assert.True(worked)
 	require.NoError(t, err)
+
+	pairs["NOPE"] = "ignored"
+	res, err := (&cnfg.ENV{}).ParseMap(pairs, &config)
+	require.NoError(t, err)
+	assert.True(res.Ok)
+	assert.Equal("bar", res.Used["FOO"])
+	assert.Equal("yup", res.Used["BAZ"])
+	_, leftover := res.Used["NOPE"]
+	assert.False(leftover)
 }
 
 func ExampleUnmarshalMap() {

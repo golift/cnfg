@@ -2,7 +2,6 @@ package cnfg
 
 import (
 	"maps"
-	"reflect"
 	"strings"
 )
 
@@ -53,16 +52,14 @@ func UnmarshalMap(pairs map[string]string, i any) (bool, error) {
 // from places other than environment variables.
 // Use this version of UnmarshalMap if you need to change the tag or prefix.
 func (e *ENV) UnmarshalMap(pairs map[string]string, i any) (bool, error) {
-	value := reflect.ValueOf(i)
-	if value.Kind() != reflect.Pointer || value.Elem().Kind() != reflect.Struct {
-		return false, ErrInvalidInterface
-	}
+	res, err := e.ParseMap(pairs, i)
 
-	if e.Tag == "" {
-		e.Tag = ENVTag
-	}
+	return res.Ok, err
+}
 
-	return (&parser{Tag: e.Tag, Vals: pairs}).Struct(value, e.Pfx)
+// ParseMap is UnmarshalMap plus a Result of which keys set fields.
+func (e *ENV) ParseMap(pairs map[string]string, i any) (Result, error) {
+	return e.parsePairs(pairs, i)
 }
 
 // MapEnvPairs turns the pairs returned by os.Environ() into a map[string]string.

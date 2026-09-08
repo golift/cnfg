@@ -21,22 +21,46 @@ func UnmarshalENV(i any, prefixes ...string) (bool, error) {
 	return (&ENV{Pfx: strings.Join(prefixes, LevelSeparator), Tag: ENVTag}).Unmarshal(i)
 }
 
+// ParseENV is UnmarshalENV plus a Result of which env names set fields.
+func ParseENV(i any, prefixes ...string) (Result, error) {
+	return (&ENV{Pfx: strings.Join(prefixes, LevelSeparator), Tag: ENVTag}).Parse(i)
+}
+
 // Unmarshal parses and processes environment variables into the provided
 // interface. Uses the Prefix and Tag name from the &ENV{} struct values.
 func (e *ENV) Unmarshal(i any) (bool, error) {
+	res, err := e.Parse(i)
+
+	return res.Ok, err
+}
+
+// Parse is Unmarshal plus a Result of which env names applied.
+func (e *ENV) Parse(i any) (Result, error) {
+	return e.parsePairs(MapEnvPairs(e.Pfx, os.Environ()), i)
+}
+
+func (e *ENV) parsePairs(pairs Pairs, i any) (Result, error) {
+	res := Result{Used: Pairs{}}
 	value := reflect.ValueOf(i)
+
 	if value.Kind() != reflect.Pointer || value.Elem().Kind() != reflect.Struct {
-		return false, ErrInvalidInterface
+		return res, ErrInvalidInterface
 	}
 
 	if e.Tag == "" {
 		e.Tag = ENVTag
 	}
 
-	// Save the current environment.
-	parse := &parser{Low: e.Low, Tag: e.Tag, Vals: MapEnvPairs(e.Pfx, os.Environ())}
+	parse := &parser{Low: e.Low, Tag: e.Tag, Vals: pairs}
 
-	return parse.Struct(value, e.Pfx)
+	ok, err := parse.Struct(value, e.Pfx)
+	res.Ok = ok
+
+	if parse.Used != nil {
+		res.Used = parse.Used
+	}
+
+	return res, err
 }
 
 // MarshalENV turns a data structure into an environment variable.

@@ -307,3 +307,138 @@ func testSpecialENV(t *testing.T, assert *assert.Assertions) {
 	assert.False(worked, "cannot parse an invalid time")
 	require.Error(t, err, "cannot parse an invalid time")
 }
+
+func TestParse(t *testing.T) {
+	t.Setenv("APP_IN", "2s")
+	t.Setenv("APP_IN_X", "3")
+	t.Setenv("APP_NAME", "cnfg")
+
+	var app AppConfig
+
+	res, err := cnfg.ParseENV(&app, "APP")
+	require.NoError(t, err)
+	assert.True(t, res.Ok)
+	assert.Equal(t, "cnfg", app.Name)
+	assert.Equal(t, 6*time.Second, app.Special.Duration)
+	assert.Equal(t, "cnfg", res.Used["APP_NAME"])
+	assert.Equal(t, "2s", res.Used["APP_IN"])
+	_, companion := res.Used["APP_IN_X"]
+	assert.False(t, companion, "ENVUnmarshaler companions read via os.Getenv are not in Used")
+}
+
+func TestParseMapUsed(t *testing.T) {
+	t.Parallel()
+
+	type node struct {
+		Kind string `xml:"kind"`
+		Port int    `xml:"port"`
+	}
+
+	type person struct {
+		Name string `xml:"name"`
+		Age  int    `xml:"age"`
+	}
+
+	type cfg struct {
+		Title  string `xml:"title"`
+		Server struct {
+			Host string `xml:"host"`
+		} `xml:"server"`
+		People []*person         `xml:"people"`
+		Labels []string          `xml:"labels"`
+		Raw    []byte            `xml:"raw"`
+		Wait   time.Duration     `xml:"wait"`
+		Envs   map[string]string `xml:"envs"`
+		Nodes  map[string]node   `xml:"nodes"`
+	}
+
+	pairs := map[string]string{
+		"APP_TITLE":            "shelter",
+		"APP_SERVER":           "junk-on-parent",
+		"APP_SERVER_HOST":      "inner",
+		"APP_PEOPLE_0":         "junk-on-index",
+		"APP_PEOPLE_0_NAME":    "ada",
+		"APP_PEOPLE_1_AGE":     "37",
+		"APP_LABELS_0":         "red",
+		"APP_LABELS_1":         "blue",
+		"APP_RAW":              "blob",
+		"APP_WAIT":             "5s",
+		"APP_ENVS":             "ONE",
+		"APP_ENVS_ONE":         "a",
+		"APP_ENVS_TWO":         "b",
+		"APP_ENVS_GONE":        "",
+		"APP_NODES_A":          "junk-on-map-parent",
+		"APP_NODES_A_KIND":     "edge",
+		"APP_NODES_A_PORT":     "8080",
+		"APP_UNUSED":           "nope",
+		"APP_SERVER_NOTAFIELD": "nope",
+	}
+
+	got := cfg{Envs: map[string]string{"GONE": "stale", "KEEP": "file"}}
+	res, err := (&cnfg.ENV{Pfx: "APP"}).ParseMap(pairs, &got)
+	require.NoError(t, err)
+	assert.True(t, res.Ok)
+
+	assert.Equal(t, "shelter", got.Title)
+	assert.Equal(t, "inner", got.Server.Host)
+	require.Len(t, got.People, 2)
+	assert.Equal(t, "ada", got.People[0].Name)
+	assert.Equal(t, 37, got.People[1].Age)
+	assert.Equal(t, []string{"red", "blue"}, got.Labels)
+	assert.Equal(t, []byte("blob"), got.Raw)
+	assert.Equal(t, 5*time.Second, got.Wait)
+	assert.Equal(t, "a", got.Envs["ONE"])
+	assert.Equal(t, "b", got.Envs["TWO"])
+	_, gone := got.Envs["GONE"]
+	assert.False(t, gone)
+	assert.Equal(t, "file", got.Envs["KEEP"])
+	assert.Equal(t, "edge", got.Nodes["A"].Kind)
+	assert.Equal(t, 8080, got.Nodes["A"].Port)
+
+	want := []string{
+		"APP_TITLE", "APP_SERVER_HOST",
+		"APP_PEOPLE_0_NAME", "APP_PEOPLE_1_AGE",
+		"APP_LABELS_0", "APP_LABELS_1",
+		"APP_RAW", "APP_WAIT",
+		"APP_ENVS_ONE", "APP_ENVS_TWO", "APP_ENVS_GONE",
+		"APP_NODES_A_KIND", "APP_NODES_A_PORT",
+	}
+	require.Len(t, res.Used, len(want), "Used=%v", res.Used)
+
+	for _, key := range want {
+		_, ok := res.Used[key]
+		assert.True(t, ok, "missing %s in Used=%v", key, res.Used)
+	}
+
+	for _, key := range []string{
+		"APP_SERVER", "APP_PEOPLE_0", "APP_NODES_A", "APP_ENVS",
+		"APP_UNUSED", "APP_SERVER_NOTAFIELD",
+	} {
+		_, ok := res.Used[key]
+		assert.False(t, ok, "parent or leftover %s must not be in Used=%v", key, res.Used)
+	}
+}
+
+func TestParseMapEmptyAndError(t *testing.T) {
+	t.Parallel()
+
+	type cfg struct {
+		Title string `xml:"title"`
+		Port  int    `xml:"port"`
+	}
+
+	res, err := (&cnfg.ENV{Pfx: "APP"}).ParseMap(map[string]string{}, &cfg{})
+	require.NoError(t, err)
+	assert.False(t, res.Ok)
+	assert.NotNil(t, res.Used)
+	assert.Empty(t, res.Used)
+
+	res, err = (&cnfg.ENV{Pfx: "APP"}).ParseMap(map[string]string{
+		"APP_TITLE": "shelter",
+		"APP_PORT":  "nope",
+	}, &cfg{})
+	require.Error(t, err)
+	assert.Equal(t, "shelter", res.Used["APP_TITLE"])
+	_, port := res.Used["APP_PORT"]
+	assert.False(t, port, "failed field must not be recorded as used")
+}

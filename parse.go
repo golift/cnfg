@@ -15,9 +15,41 @@ import (
    using reflection tags from a map of keys and values. */
 
 type parser struct {
-	Low  bool   // allow lowercase variables?
-	Tag  string // struct tag to look for on struct members
-	Vals Pairs  // pairs of env variables (saved at start)
+	Low      bool   // allow lowercase variables?
+	Tag      string // struct tag to look for on struct members
+	Vals     Pairs  // pairs of env variables (saved at start)
+	Used     Pairs  // Vals keys that set a field
+	omitUsed bool   // true while parsing map keys from a parent tag
+}
+
+func (p *parser) note(tag string) {
+	val, ok := p.Vals[tag]
+	if !ok {
+		return
+	}
+
+	if p.Used == nil {
+		p.Used = make(Pairs)
+	}
+
+	p.Used[tag] = val
+}
+
+// noteConsumed records tag only when envval is the value from Vals for that
+// exact name. Recursing into a struct/slice/map does not count the parent
+// name. Parsing a map key uses the parent tag with force=true; omitUsed
+// skips that so a parent value that happens to equal the key is not counted.
+func (p *parser) noteConsumed(tag, envval string) {
+	if p.omitUsed {
+		return
+	}
+
+	val, ok := p.Vals[tag]
+	if !ok || val != envval {
+		return
+	}
+
+	p.note(tag)
 }
 
 // Struct does most of the heavy lifting. Called every time a struct is encountered.
@@ -124,6 +156,8 @@ func (p *parser) Interface(field reflect.Value, tag, envval string, force bool) 
 			return false, fmt.Errorf("UnmarshalENV interface: %w", err)
 		}
 
+		p.noteConsumed(tag, envval)
+
 		return true, nil
 	}
 
@@ -136,6 +170,8 @@ func (p *parser) Interface(field reflect.Value, tag, envval string, force bool) 
 			return false, fmt.Errorf("UnmarshalText interface: %w", err)
 		}
 
+		p.noteConsumed(tag, envval)
+
 		return true, nil
 	}
 
@@ -146,6 +182,8 @@ func (p *parser) Interface(field reflect.Value, tag, envval string, force bool) 
 		if err := v.UnmarshalBinary([]byte(envval)); err != nil {
 			return false, fmt.Errorf("UnmarshalBinary interface: %w", err)
 		}
+
+		p.noteConsumed(tag, envval)
 
 		return true, nil
 	}
@@ -160,6 +198,7 @@ func (p *parser) Member(field reflect.Value, tag, envval string, force bool) (bo
 	// Errors cannot be type-switched from reflection for some reason.
 	if field.Type().String() == "error" {
 		field.Set(reflect.ValueOf(errors.New(envval))) //nolint:err113
+		p.noteConsumed(tag, envval)
 
 		return true, nil
 	}
@@ -203,6 +242,8 @@ func (p *parser) Member(field reflect.Value, tag, envval string, force bool) (bo
 	if err != nil {
 		return false, fmt.Errorf("%s: %w", tag, err)
 	}
+
+	p.noteConsumed(tag, envval)
 
 	return true, nil
 }
@@ -249,6 +290,8 @@ func (p *parser) customMember(field reflect.Value, tag, envval string, force boo
 		return false, fmt.Errorf("%s: %w", tag, err)
 	}
 
+	p.noteConsumed(tag, envval)
+
 	return true, nil
 }
 
@@ -264,7 +307,11 @@ func (p *parser) Slice(field reflect.Value, tag string, delenv bool) (bool, erro
 	// slice of bytes works differently than any other slice type.
 	if isByteSlice(value.Type()) {
 		envval, exists := p.Vals[tag]
-		found = exists
+		if exists {
+			found = true
+
+			p.noteConsumed(tag, envval)
+		}
 
 		value.SetBytes([]byte(envval))
 	} else {
@@ -288,7 +335,7 @@ func (p *parser) SliceValue(field reflect.Value, tag string, delenv bool) (bool,
 	total := field.Len()
 	for idx := 0; idx <= total; idx++ {
 		ntag := strings.Join([]string{tag, strconv.Itoa(idx)}, LevelSeparator)
-		envval, exists := p.Vals[ntag]
+		envval, inVals := p.Vals[ntag]
 
 		if delenv {
 			_ = os.Unsetenv(ntag) // delete it if it was requested in the env tag.
@@ -301,9 +348,10 @@ func (p *parser) SliceValue(field reflect.Value, tag string, delenv bool) (bool,
 			value = reflect.Indirect(field.Index(idx).Addr())
 		}
 
-		if exists, err := p.Anything(value, ntag, envval, exists, delenv); err != nil {
+		applied, err := p.Anything(value, ntag, envval, inVals, delenv)
+		if err != nil {
 			return false, err
-		} else if !exists {
+		} else if !applied {
 			continue
 		}
 
