@@ -15,10 +15,11 @@ import (
    using reflection tags from a map of keys and values. */
 
 type parser struct {
-	Low  bool   // allow lowercase variables?
-	Tag  string // struct tag to look for on struct members
-	Vals Pairs  // pairs of env variables (saved at start)
-	Used Pairs  // Vals keys that set a field
+	Low      bool   // allow lowercase variables?
+	Tag      string // struct tag to look for on struct members
+	Vals     Pairs  // pairs of env variables (saved at start)
+	Used     Pairs  // Vals keys that set a field
+	omitUsed bool   // true while parsing map keys from a parent tag
 }
 
 func (p *parser) note(tag string) {
@@ -36,9 +37,13 @@ func (p *parser) note(tag string) {
 
 // noteConsumed records tag only when envval is the value from Vals for that
 // exact name. Recursing into a struct/slice/map does not count the parent
-// name, and parsing a map key (force=true with envval != Vals[tag]) does not
-// count the map's own tag.
+// name. Parsing a map key uses the parent tag with force=true; omitUsed
+// skips that so a parent value that happens to equal the key is not counted.
 func (p *parser) noteConsumed(tag, envval string) {
+	if p.omitUsed {
+		return
+	}
+
 	val, ok := p.Vals[tag]
 	if !ok || val != envval {
 		return

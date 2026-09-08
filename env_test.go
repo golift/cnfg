@@ -363,6 +363,7 @@ func TestParseMapUsed(t *testing.T) {
 		"APP_LABELS_1":         "blue",
 		"APP_RAW":              "blob",
 		"APP_WAIT":             "5s",
+		"APP_ENVS":             "ONE",
 		"APP_ENVS_ONE":         "a",
 		"APP_ENVS_TWO":         "b",
 		"APP_ENVS_GONE":        "",
@@ -410,7 +411,7 @@ func TestParseMapUsed(t *testing.T) {
 	}
 
 	for _, key := range []string{
-		"APP_SERVER", "APP_PEOPLE_0", "APP_NODES_A",
+		"APP_SERVER", "APP_PEOPLE_0", "APP_NODES_A", "APP_ENVS",
 		"APP_UNUSED", "APP_SERVER_NOTAFIELD",
 	} {
 		_, ok := res.Used[key]

@@ -358,7 +358,13 @@ func (p *parser) setMapEntry(field reflect.Value, tag, key string, delenv bool) 
 	}
 
 	keyval := reflect.Indirect(reflect.New(field.Type().Key()))
-	if _, err := p.Anything(keyval, tag, key, true, false); err != nil {
+	omit := p.omitUsed
+	p.omitUsed = true
+
+	_, err := p.Anything(keyval, tag, key, true, false)
+	p.omitUsed = omit
+
+	if err != nil {
 		return false, err
 	}
 

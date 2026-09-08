@@ -57,7 +57,7 @@ func (e *ENV) UnmarshalMap(pairs map[string]string, i any) (bool, error) {
 	return res.Ok, err
 }
 
-// ParseMap is UnmarshalMap plus a Result (which keys set fields).
+// ParseMap is UnmarshalMap plus a Result of which keys set fields.
 func (e *ENV) ParseMap(pairs map[string]string, i any) (Result, error) {
 	return e.parsePairs(pairs, i)
 }

@@ -21,7 +21,7 @@ func UnmarshalENV(i any, prefixes ...string) (bool, error) {
 	return (&ENV{Pfx: strings.Join(prefixes, LevelSeparator), Tag: ENVTag}).Unmarshal(i)
 }
 
-// ParseENV is UnmarshalENV plus a Result (which env names set fields).
+// ParseENV is UnmarshalENV plus a Result of which env names set fields.
 func ParseENV(i any, prefixes ...string) (Result, error) {
 	return (&ENV{Pfx: strings.Join(prefixes, LevelSeparator), Tag: ENVTag}).Parse(i)
 }
@@ -34,7 +34,7 @@ func (e *ENV) Unmarshal(i any) (bool, error) {
 	return res.Ok, err
 }
 
-// Parse is Unmarshal plus a Result so callers can inspect which env names applied.
+// Parse is Unmarshal plus a Result of which env names applied.
 func (e *ENV) Parse(i any) (Result, error) {
 	return e.parsePairs(MapEnvPairs(e.Pfx, os.Environ()), i)
 }
