@@ -308,7 +308,7 @@ func testSpecialENV(t *testing.T, assert *assert.Assertions) {
 	require.Error(t, err, "cannot parse an invalid time")
 }
 
-func TestENVUsed(t *testing.T) { //nolint:paralleltest // sets environment variables
+func TestParse(t *testing.T) { //nolint:paralleltest // sets environment variables
 	t.Setenv("APP_TITLE", "shelter")
 	t.Setenv("APP_PEOPLE_0_NAME", "ada")
 	t.Setenv("APP_UNUSED", "nope")
@@ -322,13 +322,11 @@ func TestENVUsed(t *testing.T) { //nolint:paralleltest // sets environment varia
 		People []*person `xml:"people"`
 	}
 
-	parser := &cnfg.ENV{Pfx: "APP"}
-	ok, err := parser.Unmarshal(&cfg{})
+	res, err := cnfg.ParseENV(&cfg{}, "APP")
 	require.NoError(t, err)
-	assert.True(t, ok)
-	assert.Equal(t, "shelter", parser.Used["APP_TITLE"])
-	assert.Equal(t, "ada", parser.Used["APP_PEOPLE_0_NAME"])
-	_, leftover := parser.Used["APP_UNUSED"]
+	assert.True(t, res.Ok)
+	assert.Equal(t, "shelter", res.Used["APP_TITLE"])
+	assert.Equal(t, "ada", res.Used["APP_PEOPLE_0_NAME"])
+	_, leftover := res.Used["APP_UNUSED"]
 	assert.False(t, leftover, "prefixed vars that did not set a field must be omitted")
 }
-

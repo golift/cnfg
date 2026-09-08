@@ -37,10 +37,13 @@ type ENV struct {
 	Tag string // Struct tag name.
 	Pfx string // ENV var prefix.
 	Low bool   // Set this false to avoid capitalizing variables.
-	// Used is filled by Unmarshal and UnmarshalMap with the env names that
-	// actually set a field (full names, including Pfx). Unrelated prefixed
-	// variables are omitted. A copy of UnmarshalENV that needs this report
-	// should call ENV.Unmarshal instead.
+}
+
+// Result is the report from Parse and ParseMap. Ok is the same value Unmarshal
+// returns. Used holds the full env names that actually set a field; leftover
+// prefixed variables are omitted. Add fields here rather than on ENV.
+type Result struct {
+	Ok   bool
 	Used Pairs
 }
 
