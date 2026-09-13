@@ -246,30 +246,81 @@ func structPathOK(typ reflect.Type, parts []string, tag string, low bool) bool {
 	return false
 }
 
-func peelMapKey(remainder string, valType reflect.Type, tag string, low bool) (string, bool) {
+func owningEnvField(valType reflect.Type, parts []string, tag string, low bool) string {
+	valType = derefType(valType)
+	if len(parts) == 0 || valType == nil {
+		return ""
+	}
+
+	if isIndexedType(valType) {
+		if !isDigits(parts[0]) {
+			return ""
+		}
+
+		return owningEnvField(valType.Elem(), parts[1:], tag, low)
+	}
+
+	for _, field := range envFields(valType, tag, low) {
+		if !tokensPrefix(parts, field.tokens) {
+			continue
+		}
+
+		if fieldPathOK(field.typ, parts[len(field.tokens):], tag, low) {
+			return strings.Join(field.tokens, LevelSeparator)
+		}
+	}
+
+	return ""
+}
+
+// PeelMapKey splits remainder (the env name after a map's prefix) into the map
+// key and the env field on valType that owns the leftover path.
+//
+// The typed split is the same one ParseENV uses: the shortest key whose tail
+// is a complete field path. field is that struct tag in env form, without
+// slice indexes. Slice or array values walk leading indexes into the element
+// type, so a map of []struct peels NAME from key_0_NAME.
+//
+// Scalar values return the whole remainder as the key with an empty field.
+// Nested-map values return the first token as the key with an empty field.
+// Struct values with no matching field path use the whole remainder as the key.
+// Slice or array values with no valid index path return ok=false.
+// ok is false when remainder is empty.
+//
+// ParseENV may still treat an exact empty name as a key (clearing an indexed
+// entry). That override is not applied here; this helper is value-independent.
+func PeelMapKey(remainder string, valType reflect.Type, tag string, low bool) (string, string, bool) {
 	if remainder == "" {
-		return "", false
+		return "", "", false
 	}
 
 	valType = derefType(valType)
 	if isScalarEnvType(valType) {
-		return remainder, true
+		return remainder, "", true
 	}
 
 	if valType.Kind() == reflect.Map {
 		key, _, _ := strings.Cut(remainder, LevelSeparator)
 
-		return key, key != ""
+		return key, "", key != ""
 	}
 
 	parts := strings.Split(remainder, LevelSeparator)
 	for idx := 1; idx <= len(parts); idx++ {
-		if fieldPathOK(valType, parts[idx:], tag, low) {
-			return strings.Join(parts[:idx], LevelSeparator), true
+		tail := parts[idx:]
+		if !fieldPathOK(valType, tail, tag, low) {
+			continue
 		}
+
+		key := strings.Join(parts[:idx], LevelSeparator)
+		if len(tail) == 0 {
+			return key, "", true
+		}
+
+		return key, owningEnvField(valType, tail, tag, low), true
 	}
 
-	return "", false
+	return "", "", false
 }
 
 func dropUnmarshalerDescendants(keys []string, valType reflect.Type) []string {
@@ -310,7 +361,7 @@ func (p *parser) mapKeys(prefix string, valType reflect.Type) []string {
 		}
 
 		remainder := strings.TrimPrefix(name, child)
-		key, matched := peelMapKey(remainder, valType, p.Tag, p.Low)
+		key, _, matched := PeelMapKey(remainder, valType, p.Tag, p.Low)
 
 		if p.Vals[name] == "" && name == child+remainder &&
 			(!matched || (isIndexedType(valType) && key != remainder)) {
