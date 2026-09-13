@@ -247,8 +247,17 @@ func structPathOK(typ reflect.Type, parts []string, tag string, low bool) bool {
 }
 
 func owningEnvField(valType reflect.Type, parts []string, tag string, low bool) string {
-	if len(parts) == 0 {
+	valType = derefType(valType)
+	if len(parts) == 0 || valType == nil {
 		return ""
+	}
+
+	if isIndexedType(valType) {
+		if !isDigits(parts[0]) {
+			return ""
+		}
+
+		return owningEnvField(valType.Elem(), parts[1:], tag, low)
 	}
 
 	for _, field := range envFields(valType, tag, low) {
@@ -267,11 +276,19 @@ func owningEnvField(valType reflect.Type, parts []string, tag string, low bool) 
 // PeelMapKey splits remainder (the env name after a map's prefix) into the map
 // key and the env field on valType that owns the leftover path.
 //
-// The split is the same one ParseENV uses: the shortest key whose tail is a
-// complete field path. field is that struct tag in env form, without slice
-// indexes. Scalar and nested-map values return a key with an empty field.
-// A leftover that is not a field path makes the whole remainder the key.
+// The typed split is the same one ParseENV uses: the shortest key whose tail
+// is a complete field path. field is that struct tag in env form, without
+// slice indexes. Slice or array values walk leading indexes into the element
+// type, so a map of []struct peels NAME from key_0_NAME.
+//
+// Scalar values return the whole remainder as the key with an empty field.
+// Nested-map values return the first token as the key with an empty field.
+// Struct values with no matching field path use the whole remainder as the key.
+// Slice or array values with no valid index path return ok=false.
 // ok is false when remainder is empty.
+//
+// ParseENV may still treat an exact empty name as a key (clearing an indexed
+// entry). That override is not applied here; this helper is value-independent.
 func PeelMapKey(remainder string, valType reflect.Type, tag string, low bool) (string, string, bool) {
 	if remainder == "" {
 		return "", "", false

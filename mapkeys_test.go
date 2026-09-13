@@ -501,8 +501,15 @@ func TestPeelMapKey(t *testing.T) {
 		} `xml:"dogs"`
 	}
 
+	type dog struct {
+		Name string `xml:"name"`
+	}
+
 	folderType := reflect.TypeFor[folder]()
 	nestedType := reflect.TypeFor[nested]()
+	dogsType := reflect.TypeFor[[]dog]()
+	intsType := reflect.TypeFor[[]int]()
+	mapsType := reflect.TypeFor[map[string]string]()
 
 	tests := []struct {
 		name      string
@@ -535,6 +542,22 @@ func TestPeelMapKey(t *testing.T) {
 		{
 			name: "nested slice field", remainder: "a_DOGS_0_NAME",
 			typ: nestedType, key: "a", field: "DOGS", ok: true,
+		},
+		{
+			name: "slice of struct walks index", remainder: "key_0_NAME",
+			typ: dogsType, key: "key", field: "NAME", ok: true,
+		},
+		{
+			name: "slice of scalar index", remainder: "key_0",
+			typ: intsType, key: "key", ok: true,
+		},
+		{
+			name: "unmatched slice leftover", remainder: "key_nope",
+			typ: dogsType,
+		},
+		{
+			name: "nested map first token", remainder: "outer_inner_key",
+			typ: mapsType, key: "outer", ok: true,
 		},
 		{name: "empty", remainder: "", typ: folderType},
 		{
