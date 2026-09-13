@@ -273,7 +273,7 @@ func owningEnvField(valType reflect.Type, parts []string, tag string, low bool) 
 	return ""
 }
 
-// PeelMapKey splits remainder (the env name after a map's prefix) into the map
+// peelMapKey splits remainder (the env name after a map's prefix) into the map
 // key and the env field on valType that owns the leftover path.
 //
 // The typed split is the same one ParseENV uses: the shortest key whose tail
@@ -289,7 +289,7 @@ func owningEnvField(valType reflect.Type, parts []string, tag string, low bool) 
 //
 // ParseENV may still treat an exact empty name as a key (clearing an indexed
 // entry). That override is not applied here; this helper is value-independent.
-func PeelMapKey(remainder string, valType reflect.Type, tag string, low bool) (string, string, bool) {
+func peelMapKey(remainder string, valType reflect.Type, tag string, low bool) (string, string, bool) {
 	if remainder == "" {
 		return "", "", false
 	}
@@ -361,7 +361,7 @@ func (p *parser) mapKeys(prefix string, valType reflect.Type) []string {
 		}
 
 		remainder := strings.TrimPrefix(name, child)
-		key, _, matched := PeelMapKey(remainder, valType, p.Tag, p.Low)
+		key, _, matched := peelMapKey(remainder, valType, p.Tag, p.Low)
 
 		if p.Vals[name] == "" && name == child+remainder &&
 			(!matched || (isIndexedType(valType) && key != remainder)) {
@@ -399,6 +399,22 @@ func (p *parser) unsetMapEnv(exact string) {
 	}
 }
 
+// overlayMapValue starts ParseENV from the existing map entry when one is
+// already set, the same way SliceValue reuses an index. A zero New value
+// would replace the whole struct and drop sibling fields the env did not set.
+func overlayMapValue(field, keyval reflect.Value) reflect.Value {
+	valval := reflect.Indirect(reflect.New(field.Type().Elem()))
+
+	existing := field.MapIndex(keyval)
+	if !existing.IsValid() || (existing.Kind() == reflect.Pointer && existing.IsNil()) {
+		return valval
+	}
+
+	valval.Set(existing)
+
+	return valval
+}
+
 func (p *parser) setMapEntry(field reflect.Value, tag, key string, delenv bool) (bool, error) {
 	exact := strings.Join([]string{tag, key}, LevelSeparator)
 	val, hasExact := p.Vals[exact]
@@ -426,7 +442,7 @@ func (p *parser) setMapEntry(field reflect.Value, tag, key string, delenv bool) 
 		return true, nil
 	}
 
-	valval := reflect.Indirect(reflect.New(field.Type().Elem()))
+	valval := overlayMapValue(field, keyval)
 
 	exists, err := p.Anything(valval, exact, val, hasExact, delenv)
 	if err != nil || !exists {
