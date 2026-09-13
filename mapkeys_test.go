@@ -2,6 +2,7 @@ package cnfg_test
 
 import (
 	"os"
+	"reflect"
 	"strconv"
 	"testing"
 	"time"
@@ -480,6 +481,78 @@ func TestUnmarshalMapUnexportedEmbedDoesNotRecurse(t *testing.T) {
 	require.Contains(t, config.N, "a")
 	assert.Nil(config.N["a"].node)
 	assert.Equal("ok", config.N["a"].Value)
+}
+
+func TestPeelMapKey(t *testing.T) {
+	t.Parallel()
+
+	type folder struct {
+		Path         string   `xml:"path"`
+		ExtractPath  string   `xml:"extract_path"`
+		DeleteAfter  string   `xml:"delete_after"`
+		ExcludePaths []string `xml:"exclude_path"`
+		Paths        []string `xml:"paths"`
+	}
+
+	type nested struct {
+		Name string `xml:"name"`
+		Dogs []struct {
+			Name string `xml:"name"`
+		} `xml:"dogs"`
+	}
+
+	folderType := reflect.TypeFor[folder]()
+	nestedType := reflect.TypeFor[nested]()
+
+	tests := []struct {
+		name      string
+		remainder string
+		typ       reflect.Type
+		key       string
+		field     string
+		ok        bool
+	}{
+		{
+			name: "extract_path wins over path", remainder: "watch_EXTRACT_PATH",
+			typ: folderType, key: "watch", field: "EXTRACT_PATH", ok: true,
+		},
+		{
+			name: "path", remainder: "watch_PATH",
+			typ: folderType, key: "watch", field: "PATH", ok: true,
+		},
+		{
+			name: "underscore key", remainder: "starrs_stripes_PATH",
+			typ: folderType, key: "starrs_stripes", field: "PATH", ok: true,
+		},
+		{
+			name: "index key and slice index", remainder: "0_PATHS_0",
+			typ: folderType, key: "0", field: "PATHS", ok: true,
+		},
+		{
+			name: "exclude_path slice", remainder: "watch_EXCLUDE_PATH_0",
+			typ: folderType, key: "watch", field: "EXCLUDE_PATH", ok: true,
+		},
+		{
+			name: "nested slice field", remainder: "a_DOGS_0_NAME",
+			typ: nestedType, key: "a", field: "DOGS", ok: true,
+		},
+		{name: "empty", remainder: "", typ: folderType},
+		{
+			name: "unmatched leftover is the key", remainder: "watch_NOTAFIELD",
+			typ: folderType, key: "watch_NOTAFIELD", ok: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			key, field, ok := cnfg.PeelMapKey(test.remainder, test.typ, cnfg.ENVTag, false)
+			assert.Equal(t, test.ok, ok)
+			assert.Equal(t, test.key, key)
+			assert.Equal(t, test.field, field)
+		})
+	}
 }
 
 func BenchmarkUnmarshalMapManyRoles(b *testing.B) {
