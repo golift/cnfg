@@ -510,6 +510,8 @@ func TestPeelMapKey(t *testing.T) {
 	dogsType := reflect.TypeFor[[]dog]()
 	intsType := reflect.TypeFor[[]int]()
 	mapsType := reflect.TypeFor[map[string]string]()
+	stringType := reflect.TypeFor[string]()
+	ptrFolder := reflect.TypeFor[*folder]()
 
 	tests := []struct {
 		name      string
@@ -518,6 +520,7 @@ func TestPeelMapKey(t *testing.T) {
 		key       string
 		field     string
 		ok        bool
+		low       bool
 	}{
 		{
 			name: "extract_path wins over path", remainder: "watch_EXTRACT_PATH",
@@ -559,6 +562,26 @@ func TestPeelMapKey(t *testing.T) {
 			name: "nested map first token", remainder: "outer_inner_key",
 			typ: mapsType, key: "outer", ok: true,
 		},
+		{
+			name: "nested map empty first token", remainder: "_x",
+			typ: mapsType,
+		},
+		{
+			name: "scalar whole remainder", remainder: "db_primary",
+			typ: stringType, key: "db_primary", ok: true,
+		},
+		{
+			name: "pointer deref", remainder: "watch_PATH",
+			typ: ptrFolder, key: "watch", field: "PATH", ok: true,
+		},
+		{
+			name: "low mode keeps tag case", remainder: "watch_extract_path",
+			typ: folderType, key: "watch", field: "extract_path", ok: true, low: true,
+		},
+		{
+			name: "slice remainder is only an index", remainder: "0",
+			typ: intsType,
+		},
 		{name: "empty", remainder: "", typ: folderType},
 		{
 			name: "unmatched leftover is the key", remainder: "watch_NOTAFIELD",
@@ -570,7 +593,7 @@ func TestPeelMapKey(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			key, field, ok := cnfg.PeelMapKey(test.remainder, test.typ, cnfg.ENVTag, false)
+			key, field, ok := cnfg.PeelMapKey(test.remainder, test.typ, cnfg.ENVTag, test.low)
 			assert.Equal(t, test.ok, ok)
 			assert.Equal(t, test.key, key)
 			assert.Equal(t, test.field, field)
