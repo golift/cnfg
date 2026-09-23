@@ -51,7 +51,7 @@ type Result struct {
 	Used Pairs
 }
 
-// Satify goconst.
+// Satisfy goconst.
 const (
 	base10 = 10
 	bits8  = 8

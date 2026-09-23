@@ -44,7 +44,7 @@ type MarshalTest struct {
 }
 
 type marshalTest2 struct {
-	*MarshalTest // anonymous struct memebrs do not have their names exposed.
+	*MarshalTest // anonymous struct members do not have their names exposed.
 
 	// not setting Name2 creates empty variables (no omitempty)
 	Name2  string `xml:""` // non-anonymous struct members will use their name if no struct tag name.
