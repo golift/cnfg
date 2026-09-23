@@ -113,7 +113,7 @@ func ExampleUnmarshalENV() {
 	// Okay set some ENV variables. Pretend you did this in bash.
 	// Setting these will overwrite any existing data. If you set a slice that
 	// does not exist, it has to be the _following_ index number. In other words,
-	// if your slice is empty, setting APP_USER_1_NAME wont work, you have to start
+	// if your slice is empty, setting APP_USER_1_NAME won't work, you have to start
 	// with 0. If your slice len is 2, you can append by setting APP_USER_2_NAME
 	_ = os.Setenv("APP_USER_0_NAME", "Tim")
 	_ = os.Setenv("APP_USER_0_LEVEL_0", "1")
