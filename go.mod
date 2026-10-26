@@ -2,7 +2,7 @@ module golift.io/cnfg
 
 go 1.24
 
-toolchain go1.27.2
+toolchain go1.27.3
 
 // for tests.
 require github.com/stretchr/testify v1.12.1
